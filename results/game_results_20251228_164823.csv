@@ -1,0 +1,4 @@
+round,timestamp,predicted_lat,predicted_lng,true_lat,true_lng,distance_km,score,stage1_checkpoint,stage2_checkpoint,model,human_distance_km,human_score
+1,2025-12-28T16:48:28.749313,52.531219,-8.749100,,,,,,,main,,
+2,2025-12-28T16:49:57.888894,43.820160,104.821472,,,,,,,main,,
+3,2025-12-28T16:51:24.815132,46.386044,11.845581,,,,,,,main,,

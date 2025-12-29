@@ -1,0 +1,2 @@
+round,predicted_lat,predicted_lng,true_lat,true_lng,distance_km,score,timestamp
+1,48.45289611816406,23.132843017578125,,,,,2025-12-29T17:38:16.116976

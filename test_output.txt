@@ -1,0 +1,16 @@
+Starting test...
+Created bot
+✅ Connected to Chrome on port 9223
+   Current URL: https://www.geoguessr.com/live-challenge/91fe501d-e007-4fa8-b2b2-dc4ea4b8fc55
+✅ Set 29 cookies
+Connected!
+Game ID: 91fe501d-e007-4fa8-b2b2-dc4ea4b8fc55
+Game Type: live-challenge
+Submitting guess...
+📡 POST https://game-server.geoguessr.com/api/duels/91fe501d-e007-4fa8-b2b2-dc4ea4b8fc55/guess
+📍 Payload: lat=48.856600, lng=2.352200, round=1
+📊 Response: 400
+Success: False
+Score: None
+Error: Bad request: No such game 91fe501d-e007-4fa8-b2b2-dc4ea4b8fc55.
+Raw: {'message': 'No such game 91fe501d-e007-4fa8-b2b2-dc4ea4b8fc55.'}
