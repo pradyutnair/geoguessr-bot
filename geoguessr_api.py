@@ -738,6 +738,43 @@ class GeoGuessrAPI:
         
         return None
     
+    def start_new_session(self, ml_api_url: str) -> bool:
+        """
+        Start a new logging session on the ML server.
+        
+        This creates a new directory on the server for tracking results.
+        
+        Args:
+            ml_api_url: The ML API predict endpoint URL
+                       (e.g., "http://127.0.0.1:5000/api/v1/predict")
+        
+        Returns:
+            True if session was started successfully, False otherwise
+        """
+        try:
+            session_url = ml_api_url.replace('/predict', '/new_session')
+            resp = requests.get(session_url, timeout=5)  # Try GET first
+            if not resp.ok:
+                resp = requests.post(session_url, timeout=5)  # Fallback to POST
+            
+            if resp.ok:
+                data = resp.json()
+                log_dir = data.get('log_dir', 'unknown')
+                print(f"   📂 New session started: {log_dir}")
+                return True
+            else:
+                print(f"   ⚠️ Failed to start new session: {resp.status_code}")
+                return False
+        except requests.exceptions.Timeout:
+            print("   ⚠️ New session request timed out")
+            return False
+        except requests.exceptions.ConnectionError:
+            print("   ⚠️ Cannot connect to ML server for new session")
+            return False
+        except Exception as e:
+            print(f"   ⚠️ Error starting new session: {e}")
+            return False
+    
     def trigger_browser_refresh(self, driver) -> bool:
         """
         Trigger UI refresh in browser after API submission.

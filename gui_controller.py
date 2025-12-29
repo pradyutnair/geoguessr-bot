@@ -78,6 +78,7 @@ class GeoBotGUI:
         self.game_url_var = tk.StringVar(value="")
         self.rounds_var = tk.StringVar(value="5")
         self.results_dir_var = tk.StringVar(value="results")
+        self.new_session_var = tk.BooleanVar(value=False)
         
         self.root.configure(bg=self.colors['bg'])
         self.setup_ui()
@@ -118,6 +119,15 @@ class GeoBotGUI:
         self._create_input(row1, "ML API Port", self.ml_port_var, width=8)
         self._create_input(row1, "Rounds", self.rounds_var, width=6)
         
+        # New Session checkbox
+        self.new_session_cb = tk.Checkbutton(
+            row1, text="New Session", variable=self.new_session_var,
+            font=('Helvetica', 10), bg=self.colors['surface'], fg=self.colors['text'],
+            selectcolor=self.colors['bg'], activebackground=self.colors['surface'],
+            activeforeground=self.colors['text'], cursor='hand2'
+        )
+        self.new_session_cb.pack(side=tk.LEFT, padx=(12, 0))
+        
         # Row 2: Game URL
         row2 = tk.Frame(settings_inner, bg=self.colors['surface'])
         row2.pack(fill=tk.X, pady=(0, 12))
@@ -146,8 +156,12 @@ class GeoBotGUI:
         
         self.stop_btn = self._create_button(buttons, "■  Stop", self.stop_bot,
                                             bg=self.colors['error'], hover='#dc2626')
-        self.stop_btn.pack(side=tk.LEFT)
+        self.stop_btn.pack(side=tk.LEFT, padx=(0, 8))
         self.stop_btn.configure(state='disabled')
+        
+        self.test_api_btn = self._create_button(buttons, "🔌  Test API", self.test_api_connection,
+                                                 bg=self.colors['border'], hover=self.colors['surface_hover'])
+        self.test_api_btn.pack(side=tk.LEFT)
         
         # Status indicator
         self.status_label = tk.Label(buttons, text="● Ready", font=('Helvetica', 11),
@@ -334,6 +348,53 @@ class GeoBotGUI:
                 round_state.score,
                 round_state.timestamp
             ])
+    
+    def test_api_connection(self):
+        """Test connection to the ML API server"""
+        try:
+            ml_port = int(self.ml_port_var.get())
+        except ValueError:
+            self.log("❌ Invalid ML API port number", "error")
+            return
+        
+        ml_api_url = f"http://127.0.0.1:{ml_port}/api/v1/predict"
+        health_url = ml_api_url.replace('/predict', '/health')
+        
+        self.log(f"\n🔌 Testing API connection to port {ml_port}...", "info")
+        self.test_api_btn.configure(state='disabled')
+        self.root.update()
+        
+        def run_test():
+            import requests
+            try:
+                # Try health endpoint first
+                resp = requests.get(health_url, timeout=5)
+                if resp.ok:
+                    data = resp.json()
+                    self.root.after(0, lambda: self.log("✅ API is healthy", "success"))
+                    log_dir = data.get('log_dir', 'N/A')
+                    predictions = data.get('predictions_logged', 0)
+                    self.root.after(0, lambda: self.log(f"   📊 Log dir: {log_dir}", "info"))
+                    self.root.after(0, lambda: self.log(f"   📈 Predictions logged: {predictions}", "info"))
+                    self.root.after(0, lambda: self.set_status("API Connected", self.colors['success']))
+                else:
+                    self.root.after(0, lambda: self.log(f"⚠️ API returned status {resp.status_code}", "warning"))
+            except requests.exceptions.ConnectionError:
+                self.root.after(0, lambda: self.log("❌ Cannot connect to API server", "error"))
+                self.root.after(0, lambda: self.log("   Make sure:", "warning"))
+                self.root.after(0, lambda: self.log("   1. API server is running", "info"))
+                self.root.after(0, lambda: self.log("   2. SSH tunnel is active", "info"))
+                self.root.after(0, lambda: self.set_status("API Offline", self.colors['error']))
+            except requests.exceptions.Timeout:
+                self.root.after(0, lambda: self.log("❌ API request timed out", "error"))
+                self.root.after(0, lambda: self.set_status("API Timeout", self.colors['error']))
+            except Exception as e:
+                self.root.after(0, lambda: self.log(f"❌ API error: {e}", "error"))
+            finally:
+                self.root.after(0, lambda: self.test_api_btn.configure(state='normal'))
+        
+        # Run in thread to avoid blocking UI
+        threading.Thread(target=run_test, daemon=True).start()
             
     def start_bot(self):
         """Start the duels bot"""
@@ -399,6 +460,16 @@ class GeoBotGUI:
                     return
                     
                 self.log("✓ Connected to Chrome", "success")
+                
+                # Start new session if checkbox is checked
+                if self.new_session_var.get():
+                    self.log("🔄 Starting new logging session...", "info")
+                    from geoguessr_api import GeoGuessrAPI
+                    api = GeoGuessrAPI()
+                    if api.start_new_session(ml_api_url):
+                        self.log("✓ New session started", "success")
+                    else:
+                        self.log("⚠️ Could not start new session", "warning")
                 
                 # Navigate to game if URL provided
                 if game_url:
