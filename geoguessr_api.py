@@ -36,7 +36,7 @@ from typing import Optional, Dict, Any, Literal
 import requests
 
 
-GameType = Literal["classic", "duels", "battle-royale", "live-challenge"]
+GameType = Literal["classic", "duels", "team-duels", "battle-royale", "live-challenge"]
 
 
 @dataclass
@@ -75,6 +75,7 @@ class GeoGuessrAPI:
     API_ENDPOINTS = {
         "classic": "{base}/api/v3/games/{game_id}",  # v3 API - POST with token, lat, lng
         "duels": "{server}/api/duels/{game_id}/guess",
+        "team-duels": "{server}/api/duels/{game_id}/guess",  # Team duels use same endpoint
         "battle-royale": "{server}/api/battle-royale/{game_id}/guess",
         "live-challenge": "{server}/api/live-challenge/{game_id}/guess",  # Different from duels
     }
@@ -82,6 +83,7 @@ class GeoGuessrAPI:
     GAME_INFO_ENDPOINTS = {
         "classic": "{base}/api/v3/games/{game_id}",
         "duels": "{server}/api/duels/{game_id}",
+        "team-duels": "{server}/api/duels/{game_id}",  # Team duels use same endpoint
         "battle-royale": "{server}/api/battle-royale/{game_id}",
         "live-challenge": "{server}/api/live-challenge/{game_id}",  # Uses live-challenge path
     }
@@ -346,9 +348,12 @@ class GeoGuessrAPI:
     def _get_game_type_from_url(self, url: str) -> GameType:
         """Determine game type from URL."""
         if "/duels/" in url:
+            # Note: team-duels also uses /duels/ URL - differentiate via API response
             return "duels"
         elif "/battle-royale/" in url:
             return "battle-royale"
+        elif "/live-challenge/" in url:
+            return "live-challenge"
         else:
             return "classic"
     
@@ -356,8 +361,9 @@ class GeoGuessrAPI:
         """Extract game ID from URL."""
         patterns = [
             r'/game/([A-Za-z0-9]+)',
-            r'/duels/([A-Za-z0-9]+)',
-            r'/battle-royale/([A-Za-z0-9]+)',
+            r'/duels/([A-Za-z0-9\-]+)',  # UUID format for duels
+            r'/battle-royale/([A-Za-z0-9\-]+)',
+            r'/live-challenge/([A-Za-z0-9\-]+)',
         ]
         
         for pattern in patterns:
@@ -399,6 +405,152 @@ class GeoGuessrAPI:
         except Exception as e:
             print(f"❌ Error getting game info: {e}")
             return None
+    
+    def _parse_game_response(
+        self, 
+        data: Dict[str, Any], 
+        game_type: GameType, 
+        round_number: int
+    ) -> GuessResult:
+        """
+        Parse game response based on game type.
+        
+        Duels/Team-Duels have a different structure than Live Challenge:
+        - Duels: guesses is a dict keyed by player ID with nested score/distance
+        - Live Challenge: guesses is a list with flat score/distance
+        
+        Args:
+            data: API response data
+            game_type: Type of game
+            round_number: Current round number
+            
+        Returns:
+            GuessResult with parsed data
+        """
+        current_round = data.get("currentRoundNumber") or data.get("round") or round_number
+        
+        score = None
+        distance_m = None
+        true_lat = None
+        true_lng = None
+        total_score = None
+        
+        guesses = data.get("guesses", {})
+        rounds = data.get("rounds", [])
+        
+        # Determine response format based on guesses structure
+        if isinstance(guesses, dict):
+            # DUELS FORMAT: guesses is dict keyed by player ID
+            # Structure: guesses[playerId] = [{roundNumber, lat, lng, roundScore: {amount}, distance: {meters: {amount}}}]
+            for player_id, player_guesses in guesses.items():
+                if isinstance(player_guesses, list):
+                    for guess in player_guesses:
+                        if isinstance(guess, dict):
+                            guess_round = guess.get("roundNumber") or guess.get("round")
+                            if guess_round == round_number:
+                                # Extract score from roundScore.amount
+                                round_score = guess.get("roundScore")
+                                if isinstance(round_score, dict):
+                                    score = round_score.get("amount") or round_score.get("points")
+                                elif round_score is not None:
+                                    score = round_score
+                                
+                                # Extract distance from distance.meters.amount
+                                distance = guess.get("distance")
+                                if isinstance(distance, dict):
+                                    meters = distance.get("meters")
+                                    if isinstance(meters, dict):
+                                        distance_m = meters.get("amount")
+                                    elif meters is not None:
+                                        distance_m = meters
+                                elif distance is not None:
+                                    distance_m = distance
+                                
+                                if score is not None:
+                                    break
+                    if score is not None:
+                        break
+            
+            # Extract true location for duels (direct in rounds or in panorama object)
+            if rounds and current_round and current_round <= len(rounds):
+                round_data = rounds[current_round - 1]
+                if isinstance(round_data, dict):
+                    # Try direct lat/lng
+                    true_lat = round_data.get("lat")
+                    true_lng = round_data.get("lng")
+                    
+                    # Try panorama nested object
+                    if true_lat is None:
+                        panorama = round_data.get("panorama")
+                        if isinstance(panorama, dict):
+                            true_lat = panorama.get("lat")
+                            true_lng = panorama.get("lng")
+            
+            # Get total score from teams (for team-duels) or directly
+            teams = data.get("teams", [])
+            if teams:
+                # Team duels format - find our team's score
+                for team in teams:
+                    if isinstance(team, dict):
+                        team_score = team.get("health") or team.get("totalScore")
+                        if isinstance(team_score, dict):
+                            total_score = team_score.get("amount")
+                        elif team_score is not None:
+                            total_score = team_score
+                        break  # Just get first team for now
+            else:
+                total_score = data.get("totalScore")
+                
+        elif isinstance(guesses, list):
+            # LIVE CHALLENGE FORMAT: guesses is a list with flat structure
+            # Structure: [{roundNumber, lat, lng, score, distance}]
+            for guess in guesses:
+                if isinstance(guess, dict):
+                    guess_round = guess.get("roundNumber") or guess.get("round")
+                    if guess_round == round_number:
+                        score = guess.get("score")
+                        distance_m = guess.get("distance")
+                        break
+            
+            # If no round match, try latest guess
+            if score is None and guesses:
+                latest_guess = guesses[-1]
+                score = latest_guess.get("score")
+                distance_m = latest_guess.get("distance")
+            
+            # Extract true location for live-challenge (nested in answer.coordinateAnswerPayload.coordinate)
+            if rounds and current_round and current_round <= len(rounds):
+                round_data = rounds[current_round - 1]
+                if isinstance(round_data, dict):
+                    # Try answer.coordinateAnswerPayload.coordinate
+                    answer = round_data.get("answer", {})
+                    coord_payload = answer.get("coordinateAnswerPayload", {})
+                    coord = coord_payload.get("coordinate", {})
+                    if coord:
+                        true_lat = coord.get("lat")
+                        true_lng = coord.get("lng")
+                    
+                    # Fallback: check question.panoramaQuestionPayload.panorama
+                    if true_lat is None:
+                        question = round_data.get("question", {})
+                        pano_payload = question.get("panoramaQuestionPayload", {})
+                        pano = pano_payload.get("panorama", {})
+                        if pano:
+                            true_lat = pano.get("lat")
+                            true_lng = pano.get("lng")
+            
+            total_score = data.get("totalScore")
+        
+        return GuessResult(
+            success=True,
+            score=score,
+            distance_meters=distance_m,
+            true_lat=true_lat,
+            true_lng=true_lng,
+            round_number=current_round,
+            total_score=total_score,
+            raw_response=data
+        )
     
     def submit_guess(
         self,
@@ -507,55 +659,8 @@ class GeoGuessrAPI:
                             raw_response=data
                         )
                 else:
-                    # Duels/Battle Royale/Live Challenge format
-                    # The response contains:
-                    # - guesses: list of player's guesses with score, distance, lat, lng
-                    # - rounds: list with question/answer containing true location
-                    current_round = data.get("currentRoundNumber") or data.get("round")
-                    
-                    # Extract score and distance from guesses list
-                    score = None
-                    distance_m = None
-                    guesses = data.get("guesses", [])
-                    if isinstance(guesses, list) and guesses:
-                        # Get the latest guess (for current round)
-                        latest_guess = guesses[-1]
-                        score = latest_guess.get("score")
-                        distance_m = latest_guess.get("distance")
-                    
-                    # Extract true location from rounds
-                    true_lat = None
-                    true_lng = None
-                    rounds = data.get("rounds", [])
-                    if rounds and current_round and current_round <= len(rounds):
-                        round_data = rounds[current_round - 1]
-                        # True location can be in answer or question.panoramaQuestionPayload.panorama
-                        answer = round_data.get("answer", {})
-                        coord_payload = answer.get("coordinateAnswerPayload", {})
-                        coord = coord_payload.get("coordinate", {})
-                        if coord:
-                            true_lat = coord.get("lat")
-                            true_lng = coord.get("lng")
-                        
-                        # Fallback: check question.panoramaQuestionPayload.panorama
-                        if true_lat is None:
-                            question = round_data.get("question", {})
-                            pano_payload = question.get("panoramaQuestionPayload", {})
-                            pano = pano_payload.get("panorama", {})
-                            if pano:
-                                true_lat = pano.get("lat")
-                                true_lng = pano.get("lng")
-                    
-                    result = GuessResult(
-                        success=True,
-                        score=score,
-                        distance_meters=distance_m,
-                        true_lat=true_lat,
-                        true_lng=true_lng,
-                        round_number=current_round,
-                        total_score=data.get("totalScore"),
-                        raw_response=data
-                    )
+                    # Handle different game types with their specific response structures
+                    result = self._parse_game_response(data, game_type, round_number)
                 
                 print(f"✅ Guess accepted!")
                 if result.score:
@@ -706,6 +811,61 @@ class GeoGuessrAPI:
             return None
         except Exception:
             return None
+    
+    def get_game_state(self, game_id: str, game_type: GameType) -> Dict[str, Any]:
+        """
+        Get comprehensive game state info including round details.
+        
+        Args:
+            game_id: The game ID
+            game_type: Type of game
+            
+        Returns:
+            Dict with: current_round, total_rounds, state, is_finished, 
+                      game_mode (for duels: '1v1' or 'team')
+        """
+        game_info = self.get_game_info(game_id, game_type)
+        if not game_info:
+            return {
+                "current_round": 1,
+                "total_rounds": 0,  # Unknown
+                "state": "unknown",
+                "is_finished": False,
+                "game_mode": "1v1",
+            }
+        
+        # Extract common fields
+        current_round = game_info.get("currentRoundNumber") or game_info.get("round") or 1
+        state = game_info.get("state", "")
+        is_finished = state in ["finished", "ended"]
+        
+        # Total rounds varies by game type and can change dynamically in duels
+        rounds = game_info.get("rounds", [])
+        total_rounds = len(rounds) if rounds else 0
+        
+        # For duels, check if it's team mode
+        game_mode = "1v1"
+        teams = game_info.get("teams", [])
+        if teams:
+            # Team duels have teams array
+            game_mode = "team"
+            # Team duels can go to 6 rounds
+        
+        # Check options for round settings
+        options = game_info.get("options", {})
+        if options:
+            max_rounds = options.get("maxRounds") or options.get("rounds")
+            if max_rounds:
+                total_rounds = max(total_rounds, max_rounds)
+        
+        return {
+            "current_round": current_round,
+            "total_rounds": total_rounds,
+            "state": state,
+            "is_finished": is_finished,
+            "game_mode": game_mode,
+            "raw": game_info,
+        }
     
     def get_pano_id_for_round(
         self, 

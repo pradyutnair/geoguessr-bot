@@ -63,7 +63,8 @@ class RoundState:
     lng: Optional[float] = None
     predicted_lat: Optional[float] = None
     predicted_lng: Optional[float] = None
-    score: Optional[int] = None
+    score: Optional[int] = None  # Points (live-challenge) or 0 for duels
+    damage: Optional[int] = None  # Damage dealt in duels (negative = we took damage)
     distance_meters: Optional[float] = None
     guess_submitted: bool = False
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
@@ -319,6 +320,7 @@ class DuelsBot:
         on_round_start: Optional[Callable[[int, Optional[str]], None]] = None,
         on_prediction: Optional[Callable[[float, float], None]] = None,
         on_guess_result: Optional[Callable[[GuessResult], None]] = None,
+        on_round_complete: Optional[Callable[['RoundState'], None]] = None,
         on_game_end: Optional[Callable[['DuelState'], None]] = None,
     ):
         """
@@ -333,6 +335,7 @@ class DuelsBot:
             on_round_start: Callback when round starts (round_num, pano_id)
             on_prediction: Callback when prediction is made (lat, lng)
             on_guess_result: Callback when guess result received (GuessResult)
+            on_round_complete: Callback when round completes (RoundState)
             on_game_end: Callback when game ends (DuelState)
         """
         self.chrome_port = chrome_debug_port
@@ -345,6 +348,7 @@ class DuelsBot:
         self.on_round_start = on_round_start
         self.on_prediction = on_prediction
         self.on_guess_result = on_guess_result
+        self.on_round_complete = on_round_complete
         self.on_game_end = on_game_end
         
         # Components
@@ -356,6 +360,7 @@ class DuelsBot:
         self.current_game: Optional[DuelState] = None
         self.should_stop = threading.Event()
         self._connected = False
+        self._user_id: Optional[str] = None  # Cached user ID
         
         # Load cookies if provided
         if cookies_file and Path(cookies_file).exists():
@@ -399,6 +404,22 @@ class DuelsBot:
     def is_connected(self) -> bool:
         """Check if connected to Chrome."""
         return self._connected and self.driver is not None
+    
+    def get_user_id(self) -> Optional[str]:
+        """Get the current user's ID (cached after first call)."""
+        if self._user_id:
+            return self._user_id
+        
+        try:
+            user_info = self.api.get_user_info()
+            if user_info:
+                self._user_id = user_info.get("user", {}).get("id")
+                if self._user_id:
+                    self._log(f"   👤 User ID: {self._user_id[:8]}...")
+                return self._user_id
+        except Exception as e:
+            self._log(f"   ⚠️ Failed to get user ID: {e}")
+        return None
     
     def get_game_id_from_url(self, url: Optional[str] = None) -> Optional[str]:
         """Extract game ID from URL."""
@@ -1032,34 +1053,93 @@ class DuelsBot:
         self._log("⏳ Waiting for round to end...")
         self.wait_for_round_end()
         
-        # If we didn't get results from immediate response, fetch them now
-        if round_state.score is None or round_state.lat is None:
-            self._log("📊 Fetching round results...")
-            round_results = self.get_round_results(game_id, game_type, round_number)
-            if round_results:
-                if round_state.score is None:
-                    round_state.score = round_results.get("score")
-                if round_state.distance_meters is None:
-                    round_state.distance_meters = round_results.get("distance_meters")
-                if round_state.lat is None:
-                    round_state.lat = round_results.get("true_lat")
-                if round_state.lng is None:
-                    round_state.lng = round_results.get("true_lng")
+        # Poll API until round results are available (opponent has guessed)
+        self._log("📊 Fetching round results...")
+        round_results = None
+        max_wait_time = 60  # Maximum seconds to wait for results
+        poll_interval = 2  # Seconds between polls
+        start_time = time.time()
         
-        # Log the results
-        if round_state.score is not None:
-            self._log(f"   ✅ Score: {round_state.score} points")
+        while time.time() - start_time < max_wait_time:
+            if self.should_stop.is_set():
+                break
+                
+            round_results = self.get_round_results(game_id, game_type, round_number)
+            
+            # Check if we got valid results
+            # For duels: both score AND damage should be available when round truly ends
+            # (having just distance means our guess exists but round hasn't ended yet)
+            if round_results:
+                has_score = round_results.get("score") is not None
+                has_damage = round_results.get("damage") is not None
+                
+                # For duels, we need BOTH score and damage (both come from roundResults)
+                # If we only have distance, the round hasn't ended yet
+                if game_type in ("duels", "team-duels"):
+                    if has_score and has_damage:
+                        self._log(f"   ✓ Results received after {time.time() - start_time:.1f}s")
+                        break
+                else:
+                    # For other modes, score is sufficient
+                    if has_score:
+                        self._log(f"   ✓ Results received after {time.time() - start_time:.1f}s")
+                        break
+            
+            # Wait before next poll
+            time.sleep(poll_interval)
+        
+        if round_results:
+            if round_state.score is None:
+                round_state.score = round_results.get("score")
+            if round_state.distance_meters is None:
+                round_state.distance_meters = round_results.get("distance_meters")
+            if round_state.lat is None:
+                round_state.lat = round_results.get("true_lat")
+            if round_state.lng is None:
+                round_state.lng = round_results.get("true_lng")
+            # Get damage for duels
+            round_state.damage = round_results.get("damage")
+        
+        # Log the results based on game type
+        if game_type in ("duels", "team-duels"):
+            # For duels, show damage instead of score
+            if round_state.damage is not None:
+                if round_state.damage < 0:
+                    self._log(f"   ❌ Damage taken: {abs(round_state.damage)} HP")
+                elif round_state.damage > 0:
+                    self._log(f"   ✅ Damage dealt: {round_state.damage} HP")
+                else:
+                    self._log(f"   ➖ Tie round (0 damage)")
+            if round_state.score is not None:
+                self._log(f"   🎯 Score: {round_state.score} pts")
+        else:
+            # For other modes, show score
+            if round_state.score is not None:
+                self._log(f"   ✅ Score: {round_state.score} points")
+        
         if round_state.distance_meters is not None:
             self._log(f"   📏 Distance: {round_state.distance_meters:.0f} meters")
         if round_state.lat and round_state.lng:
             self._log(f"   📍 True location: ({round_state.lat:.4f}, {round_state.lng:.4f})")
+        
+        # Invoke round complete callback
+        if self.on_round_complete:
+            try:
+                self.on_round_complete(round_state)
+            except Exception as e:
+                self._log(f"   ⚠️ Callback error: {e}")
         
         return round_state
     
     def get_round_results(self, game_id: str, game_type: str, round_number: int) -> Optional[Dict[str, Any]]:
         """
         Fetch round results from API after round ends.
-        Returns dict with score, distance_meters, true_lat, true_lng.
+        Returns dict with score, damage, distance_meters, true_lat, true_lng, predicted_lat, predicted_lng.
+        
+        For duels/team-duels: 
+            - score = our score (points)
+            - damage = health lost (negative = we took damage, 0 = we won the round)
+        For live-challenge: score is points earned
         """
         try:
             # Get game data
@@ -1078,7 +1158,7 @@ class DuelsBot:
                     true_lat = round_data.get("lat")
                     true_lng = round_data.get("lng")
                     
-                    # Try panorama nested object
+                    # Try panorama nested object (duels format)
                     if true_lat is None:
                         panorama = round_data.get("panorama")
                         if isinstance(panorama, dict):
@@ -1103,62 +1183,144 @@ class DuelsBot:
                             true_lat = pano.get("lat")
                             true_lng = pano.get("lng")
             
-            # Get our guess from guesses
+            # Initialize results
             score = None
+            damage = None
             distance_meters = None
-            guesses = game_data.get("guesses", [])
+            predicted_lat = None
+            predicted_lng = None
             
-            # Handle guesses as a LIST (live-challenge format)
-            if isinstance(guesses, list):
-                for guess in guesses:
-                    if isinstance(guess, dict):
-                        guess_round = guess.get("roundNumber") or guess.get("round")
-                        if guess_round == round_number:
-                            score = guess.get("score")
-                            distance_meters = guess.get("distance")
-                            break
-            
-            # Handle guesses as a DICT (duels format - keyed by player ID)
-            elif isinstance(guesses, dict):
-                for player_id, player_guesses in guesses.items():
-                    if isinstance(player_guesses, list):
-                        for guess in player_guesses:
-                            if isinstance(guess, dict):
-                                guess_round = guess.get("roundNumber") or guess.get("round")
-                                if guess_round == round_number:
-                                    # Extract score
-                                    round_score = guess.get("roundScore") or guess.get("score")
-                                    if isinstance(round_score, dict):
-                                        score = round_score.get("amount") or round_score.get("points")
-                                    elif round_score is not None:
-                                        score = round_score
+            # For duels/team-duels, get results from teams.roundResults
+            if game_type in ("duels", "team-duels"):
+                our_user_id = self.get_user_id()
+                teams = game_data.get("teams", [])
+                
+                if not our_user_id:
+                    self._log(f"   ⚠️ Could not get user ID - cannot match team")
+                else:
+                    found_our_team = False
+                    for team in teams:
+                        # Check if this is our team
+                        players = team.get("players", [])
+                        is_our_team = any(p.get("playerId") == our_user_id for p in players)
+                        
+                        if is_our_team:
+                            found_our_team = True
+                            round_results_list = team.get("roundResults", [])
+                            
+                            # Find results for this round
+                            for rr in round_results_list:
+                                if rr.get("roundNumber") == round_number:
+                                    # Our score (points) - only set if present
+                                    score = rr.get("score")
                                     
-                                    # Extract distance
-                                    distance = guess.get("distance") or guess.get("distanceInMeters")
-                                    if isinstance(distance, dict):
-                                        meters = distance.get("meters")
-                                        if isinstance(meters, dict):
-                                            distance_meters = meters.get("amount")
-                                        elif meters is not None:
-                                            distance_meters = meters
-                                    elif distance is not None:
-                                        distance_meters = distance
+                                    # Damage taken = healthAfter - healthBefore
+                                    # Only calculate if health values are actually present (not just defaulting to 0)
+                                    health_before = rr.get("healthBefore")
+                                    health_after = rr.get("healthAfter")
+                                    if health_before is not None and health_after is not None:
+                                        damage = health_after - health_before  # Negative = took damage
                                     
-                                    if score is not None:
+                                    # Get our guess details from bestGuess
+                                    best_guess = rr.get("bestGuess")
+                                    if best_guess:
+                                        distance_meters = best_guess.get("distance")
+                                        predicted_lat = best_guess.get("lat")
+                                        predicted_lng = best_guess.get("lng")
+                                    
+                                    break
+                            
+                            # If not found in roundResults, try player guesses
+                            if score is None:
+                                for player in players:
+                                    if player.get("playerId") == our_user_id:
+                                        player_guesses = player.get("guesses", [])
+                                        for guess in player_guesses:
+                                            if guess.get("roundNumber") == round_number:
+                                                score = guess.get("score")
+                                                distance_meters = guess.get("distance")
+                                                predicted_lat = guess.get("lat")
+                                                predicted_lng = guess.get("lng")
+                                                break
                                         break
-                        if score is not None:
+                            
                             break
+                    
+                    if not found_our_team:
+                        self._log(f"   ⚠️ Could not find our team in game data")
+            
+            # For live-challenge and other modes, use guesses array
+            else:
+                guesses = game_data.get("guesses", [])
+                
+                if isinstance(guesses, list):
+                    for guess in guesses:
+                        if isinstance(guess, dict):
+                            guess_round = guess.get("roundNumber") or guess.get("round")
+                            if guess_round == round_number:
+                                score = guess.get("score")
+                                distance_meters = guess.get("distance")
+                                break
             
             return {
                 "score": score,
+                "damage": damage,
                 "distance_meters": distance_meters,
                 "true_lat": true_lat,
                 "true_lng": true_lng,
+                "predicted_lat": predicted_lat,
+                "predicted_lng": predicted_lng,
             }
             
         except Exception as e:
             self._log(f"   ⚠️ Error fetching results: {e}")
             return None
+    
+    def is_game_finished(self, game_id: str, game_type: str) -> Tuple[bool, Optional[str]]:
+        """
+        Check if the game is finished.
+        
+        Returns:
+            Tuple of (is_finished, winner) where winner is 'us', 'opponent', 'draw', or None
+        """
+        try:
+            game_data = self.get_round_data_from_api(game_id, game_type)
+            if not game_data:
+                return False, None
+            
+            # Check status field (duels use this)
+            status = game_data.get("status", "")
+            if status.lower() == "finished":
+                # Check result
+                result = game_data.get("result", {})
+                winning_team_id = result.get("winningTeamId")
+                is_draw = result.get("isDraw", False)
+                
+                if is_draw:
+                    return True, "draw"
+                
+                # Find if we won
+                our_user_id = self.get_user_id()
+                teams = game_data.get("teams", [])
+                
+                for team in teams:
+                    players = team.get("players", [])
+                    is_our_team = any(p.get("playerId") == our_user_id for p in players)
+                    
+                    if team.get("id") == winning_team_id:
+                        return True, "us" if is_our_team else "opponent"
+                
+                return True, None
+            
+            # Check state field (alternative)
+            state = game_data.get("state", "")
+            if state.lower() in ("finished", "ended"):
+                return True, None
+            
+            return False, None
+            
+        except Exception:
+            return False, None
     
     def play_game(self, game_url: Optional[str] = None, num_rounds: int = 5) -> Optional[DuelState]:
         """
@@ -1166,7 +1328,7 @@ class DuelsBot:
         
         Args:
             game_url: URL of the duel game (optional if already on game page)
-            num_rounds: Expected number of rounds
+            num_rounds: Maximum number of rounds (use large number for duels which can vary)
         
         Returns:
             DuelState with game results
@@ -1192,12 +1354,34 @@ class DuelsBot:
             self._log("❌ Could not determine game ID from URL")
             return None
         
+        # Get current game state from API to determine starting round
+        game_data = self.get_round_data_from_api(game_id, game_type)
+        starting_round = 1
+        if game_data:
+            # Get current round from API
+            api_round = game_data.get("currentRoundNumber") or game_data.get("round")
+            if api_round:
+                starting_round = api_round
+            
+            # Check if game is already finished using new method
+            is_finished, winner = self.is_game_finished(game_id, game_type)
+            if is_finished:
+                self._log("❌ Game is already finished")
+                return None
+        
         self._log(f"\n{'='*60}")
-        self._log(f"🎮 STARTING DUEL GAME")
+        self._log(f"🎮 STARTING GAME")
         self._log(f"{'='*60}")
         self._log(f"   Game ID: {game_id}")
         self._log(f"   Game Type: {game_type}")
         self._log(f"   ML API: {self.ml_api_url}")
+        self._log(f"   Starting from round: {starting_round}")
+        
+        # For duels/team-duels, rounds are dynamic - don't show fixed number
+        if game_type in ("duels", "team-duels"):
+            self._log(f"   Rounds: dynamic (until game ends)")
+        else:
+            self._log(f"   Max Rounds: {num_rounds}")
         self._log(f"{'='*60}")
         
         # Initialize game state
@@ -1205,13 +1389,39 @@ class DuelsBot:
             game_id=game_id,
             game_type=game_type,
             total_rounds=num_rounds,
+            current_round=starting_round,
         )
         
-        # Play rounds with manual confirmation
-        for round_num in range(1, num_rounds + 1):
+        # Play rounds with manual confirmation - start from detected round
+        round_num = starting_round - 1  # Will be incremented at start of loop
+        while round_num < num_rounds:
+            round_num += 1
+            
             if self.should_stop.is_set():
                 self._log("\n⚠️ Bot stopped by user")
                 break
+            
+            # Check if game is finished using new method
+            is_finished, winner = self.is_game_finished(game_id, game_type)
+            if is_finished:
+                self._log(f"\n🏁 Game has ended!")
+                if winner == "us":
+                    self._log("   🎉 We won!")
+                elif winner == "opponent":
+                    self._log("   😢 Opponent won")
+                elif winner == "draw":
+                    self._log("   🤝 It's a draw!")
+                self.current_game.game_finished = True
+                break
+            
+            # Check current round from API before each round
+            game_data = self.get_round_data_from_api(game_id, game_type)
+            if game_data:
+                # Update round number from API
+                api_round = game_data.get("currentRoundNumber") or game_data.get("round")
+                if api_round and api_round > round_num:
+                    self._log(f"⏭️ Skipping to round {api_round} (detected from API)")
+                    round_num = api_round
             
             # Wait for user confirmation before each round
             self._log(f"\n{'='*50}")
@@ -1235,19 +1445,39 @@ class DuelsBot:
                 if round_state.score:
                     self.current_game.bot_total_score += round_state.score
             
-            # Check if game is finished
-            game_data = self.get_round_data_from_api(game_id, game_type)
-            if game_data:
-                state = game_data.get("state", "")
-                if state in ["finished", "ended"]:
-                    self.current_game.game_finished = True
-                    break
+            # Check if game is finished after round
+            is_finished, winner = self.is_game_finished(game_id, game_type)
+            if is_finished:
+                self._log(f"\n🏁 Game has ended!")
+                if winner == "us":
+                    self._log("   🎉 We won!")
+                elif winner == "opponent":
+                    self._log("   😢 Opponent won")
+                elif winner == "draw":
+                    self._log("   🤝 It's a draw!")
+                self.current_game.game_finished = True
+                break
         
-        # Game finished
+        # Game finished - show summary based on game type
         self._log(f"\n{'='*60}")
         self._log(f"🏆 GAME COMPLETE!")
         self._log(f"{'='*60}")
-        self._log(f"   Total Score: {self.current_game.bot_total_score}")
+        
+        if game_type in ("duels", "team-duels"):
+            # Calculate total damage for duels
+            total_damage = sum(getattr(r, 'damage', 0) or 0 for r in self.current_game.rounds)
+            total_score = sum(r.score or 0 for r in self.current_game.rounds)
+            avg_dist = sum((r.distance_meters or 0) for r in self.current_game.rounds) / max(1, len(self.current_game.rounds))
+            
+            if total_damage >= 0:
+                self._log(f"   Net Damage: +{total_damage} HP (dealt)")
+            else:
+                self._log(f"   Net Damage: {total_damage} HP (taken)")
+            self._log(f"   Total Score: {total_score} pts")
+            self._log(f"   Avg Distance: {avg_dist/1000:.1f} km")
+        else:
+            self._log(f"   Total Score: {self.current_game.bot_total_score}")
+        
         self._log(f"   Rounds Played: {len(self.current_game.rounds)}")
         self._log(f"{'='*60}")
         

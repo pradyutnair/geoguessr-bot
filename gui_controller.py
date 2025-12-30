@@ -76,9 +76,15 @@ class GeoBotGUI:
         self.chrome_port_var = tk.StringVar(value="9223")
         self.ml_port_var = tk.StringVar(value="5000")
         self.game_url_var = tk.StringVar(value="")
-        self.rounds_var = tk.StringVar(value="5")
+        self.rounds_var = tk.StringVar(value="auto")  # Default to auto-detect
         self.results_dir_var = tk.StringVar(value="results")
         self.new_session_var = tk.BooleanVar(value=False)
+        self.game_type_var = tk.StringVar(value="auto")  # Auto-detected game type
+        self.current_round_var = tk.StringVar(value="-")
+        self.total_rounds_var = tk.StringVar(value="-")
+        
+        # Add trace on game URL to auto-detect game type
+        self.game_url_var.trace_add("write", self._on_url_change)
         
         self.root.configure(bg=self.colors['bg'])
         self.setup_ui()
@@ -117,7 +123,25 @@ class GeoBotGUI:
         
         self._create_input(row1, "Chrome Port", self.chrome_port_var, width=8)
         self._create_input(row1, "ML API Port", self.ml_port_var, width=8)
-        self._create_input(row1, "Rounds", self.rounds_var, width=6)
+        
+        # Game type indicator (auto-detected from URL)
+        game_type_frame = tk.Frame(row1, bg=self.colors['surface'])
+        game_type_frame.pack(side=tk.LEFT, padx=(12, 0))
+        tk.Label(game_type_frame, text="Game Type", font=('Helvetica', 10),
+                bg=self.colors['surface'], fg=self.colors['text_secondary']).pack(anchor='w')
+        self.game_type_label = tk.Label(game_type_frame, textvariable=self.game_type_var, 
+                                        font=('Helvetica', 11, 'bold'),
+                                        bg=self.colors['surface'], fg=self.colors['accent'])
+        self.game_type_label.pack(anchor='w', pady=(4, 0))
+        
+        # Round info
+        round_frame = tk.Frame(row1, bg=self.colors['surface'])
+        round_frame.pack(side=tk.LEFT, padx=(12, 0))
+        tk.Label(round_frame, text="Round", font=('Helvetica', 10),
+                bg=self.colors['surface'], fg=self.colors['text_secondary']).pack(anchor='w')
+        self.round_label = tk.Label(round_frame, text="-/-", font=('Helvetica', 11, 'bold'),
+                                    bg=self.colors['surface'], fg=self.colors['text'])
+        self.round_label.pack(anchor='w', pady=(4, 0))
         
         # New Session checkbox
         self.new_session_cb = tk.Checkbutton(
@@ -255,6 +279,43 @@ class GeoBotGUI:
         paned.add(results_frame, minsize=120)
         
         self.log("Ready. Enter game URL and click Start Bot.", "info")
+    
+    def _on_url_change(self, *args):
+        """Called when game URL changes - auto-detect game type"""
+        url = self.game_url_var.get().strip()
+        if not url:
+            self.game_type_var.set("auto")
+            return
+        
+        game_type = self._detect_game_type(url)
+        self.game_type_var.set(game_type)
+        
+        # Update color based on game type
+        color_map = {
+            "duels": self.colors['success'],
+            "team-duels": self.colors['success'],
+            "live-challenge": self.colors['warning'],
+            "battle-royale": self.colors['error'],
+            "classic": self.colors['accent'],
+        }
+        self.game_type_label.configure(fg=color_map.get(game_type, self.colors['text_secondary']))
+    
+    def _detect_game_type(self, url: str) -> str:
+        """Detect game type from URL"""
+        if "/duels/" in url:
+            return "duels"
+        elif "/live-challenge/" in url:
+            return "live-challenge"
+        elif "/battle-royale/" in url:
+            return "battle-royale"
+        elif "/game/" in url:
+            return "classic"
+        return "unknown"
+    
+    def _update_round_display(self, current: int, total: int):
+        """Update the round display label"""
+        total_str = str(total) if total > 0 else "?"
+        self.round_label.configure(text=f"{current}/{total_str}")
         
     def _create_input(self, parent, label, var, width=12):
         """Create a labeled input field"""
@@ -305,21 +366,38 @@ class GeoBotGUI:
             self.next_btn.configure(state='disabled')
             self.log("✓ Confirmed - processing round...", "success")
             
-    def update_results_table(self, round_state: 'RoundState'):
+    def update_results_table(self, round_state: 'RoundState', game_type: str = "duels"):
         """Add a round result to the table"""
         pred = f"({round_state.predicted_lat:.4f}, {round_state.predicted_lng:.4f})" if round_state.predicted_lat else "-"
         true_loc = f"({round_state.lat:.4f}, {round_state.lng:.4f})" if round_state.lat else "-"
         dist = f"{round_state.distance_meters/1000:.2f} km" if round_state.distance_meters else "-"
-        score = str(round_state.score) if round_state.score else "-"
+        
+        # Show damage for duels, score for other modes
+        if game_type in ("duels", "team-duels"):
+            damage = getattr(round_state, 'damage', None)
+            if damage is not None:
+                score_str = f"{damage:+d} HP" if damage != 0 else "0 HP"
+            else:
+                score_str = "-"
+        else:
+            score_str = str(round_state.score) if round_state.score is not None else "-"
         
         self.results_tree.insert('', 'end', values=(
-            round_state.round_number, pred, true_loc, dist, score
+            round_state.round_number, pred, true_loc, dist, score_str
         ))
         
-        # Update summary
-        total_score = sum(r.score or 0 for r in self.results_data)
-        avg_dist = sum((r.distance_meters or 0) for r in self.results_data) / len(self.results_data) if self.results_data else 0
-        self.summary_label.configure(text=f"Total: {total_score} pts | Avg: {avg_dist/1000:.1f} km")
+        # Update summary based on game type
+        if game_type in ("duels", "team-duels"):
+            total_damage = sum(getattr(r, 'damage', 0) or 0 for r in self.results_data)
+            avg_dist = sum((r.distance_meters or 0) for r in self.results_data) / len(self.results_data) if self.results_data else 0
+            if total_damage >= 0:
+                self.summary_label.configure(text=f"Net: +{total_damage} HP | Avg: {avg_dist/1000:.1f} km")
+            else:
+                self.summary_label.configure(text=f"Net: {total_damage} HP | Avg: {avg_dist/1000:.1f} km")
+        else:
+            total_score = sum(r.score or 0 for r in self.results_data)
+            avg_dist = sum((r.distance_meters or 0) for r in self.results_data) / len(self.results_data) if self.results_data else 0
+            self.summary_label.configure(text=f"Total: {total_score} pts | Avg: {avg_dist/1000:.1f} km")
         
     def save_result_to_csv(self, round_state: 'RoundState'):
         """Save round result to CSV file"""
@@ -333,7 +411,7 @@ class GeoBotGUI:
             with open(self.results_file, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['round', 'predicted_lat', 'predicted_lng', 'true_lat', 'true_lng', 
-                               'distance_km', 'score', 'timestamp'])
+                               'distance_km', 'score', 'damage', 'timestamp'])
         
         # Append result
         with open(self.results_file, 'a', newline='') as f:
@@ -346,52 +424,124 @@ class GeoBotGUI:
                 round_state.lng,
                 round_state.distance_meters / 1000 if round_state.distance_meters else None,
                 round_state.score,
+                getattr(round_state, 'damage', None),
                 round_state.timestamp
             ])
     
     def test_api_connection(self):
-        """Test connection to the ML API server"""
+        """Test connection to the ML API server and validate GeoGuessr cookies"""
         try:
             ml_port = int(self.ml_port_var.get())
+            chrome_port = int(self.chrome_port_var.get())
         except ValueError:
-            self.log("❌ Invalid ML API port number", "error")
+            self.log("❌ Invalid port number", "error")
             return
         
         ml_api_url = f"http://127.0.0.1:{ml_port}/api/v1/predict"
         health_url = ml_api_url.replace('/predict', '/health')
+        game_url = self.game_url_var.get().strip()
         
-        self.log(f"\n🔌 Testing API connection to port {ml_port}...", "info")
+        self.log(f"\n🔌 Testing connections...", "info")
         self.test_api_btn.configure(state='disabled')
         self.root.update()
         
         def run_test():
             import requests
+            ml_ok = False
+            cookies_ok = False
+            
+            # Test 1: ML API health
+            self.root.after(0, lambda: self.log("1️⃣ Testing ML API...", "info"))
             try:
-                # Try health endpoint first
                 resp = requests.get(health_url, timeout=5)
                 if resp.ok:
                     data = resp.json()
-                    self.root.after(0, lambda: self.log("✅ API is healthy", "success"))
+                    self.root.after(0, lambda: self.log("   ✅ ML API is healthy", "success"))
                     log_dir = data.get('log_dir', 'N/A')
                     predictions = data.get('predictions_logged', 0)
                     self.root.after(0, lambda: self.log(f"   📊 Log dir: {log_dir}", "info"))
                     self.root.after(0, lambda: self.log(f"   📈 Predictions logged: {predictions}", "info"))
-                    self.root.after(0, lambda: self.set_status("API Connected", self.colors['success']))
+                    ml_ok = True
                 else:
-                    self.root.after(0, lambda: self.log(f"⚠️ API returned status {resp.status_code}", "warning"))
+                    self.root.after(0, lambda: self.log(f"   ⚠️ ML API returned status {resp.status_code}", "warning"))
             except requests.exceptions.ConnectionError:
-                self.root.after(0, lambda: self.log("❌ Cannot connect to API server", "error"))
-                self.root.after(0, lambda: self.log("   Make sure:", "warning"))
-                self.root.after(0, lambda: self.log("   1. API server is running", "info"))
-                self.root.after(0, lambda: self.log("   2. SSH tunnel is active", "info"))
-                self.root.after(0, lambda: self.set_status("API Offline", self.colors['error']))
+                self.root.after(0, lambda: self.log("   ❌ Cannot connect to ML API server", "error"))
             except requests.exceptions.Timeout:
-                self.root.after(0, lambda: self.log("❌ API request timed out", "error"))
-                self.root.after(0, lambda: self.set_status("API Timeout", self.colors['error']))
+                self.root.after(0, lambda: self.log("   ❌ ML API request timed out", "error"))
             except Exception as e:
-                self.root.after(0, lambda: self.log(f"❌ API error: {e}", "error"))
-            finally:
-                self.root.after(0, lambda: self.test_api_btn.configure(state='normal'))
+                self.root.after(0, lambda: self.log(f"   ❌ ML API error: {e}", "error"))
+            
+            # Test 2: GeoGuessr cookie validation
+            self.root.after(0, lambda: self.log("\n2️⃣ Testing GeoGuessr authentication...", "info"))
+            try:
+                from geoguessr_api import GeoGuessrAPI
+                api = GeoGuessrAPI()
+                
+                # Load cookies from file
+                import os
+                cookies_file = "cookies.json"
+                if os.path.exists(cookies_file):
+                    api.load_cookies_from_file(cookies_file)
+                    self.root.after(0, lambda: self.log(f"   📁 Loaded cookies from {cookies_file}", "info"))
+                else:
+                    self.root.after(0, lambda: self.log("   ⚠️ No cookies.json found", "warning"))
+                
+                # Test authentication by getting user profile
+                if api.is_authenticated():
+                    user_info = api.get_user_info()
+                    if user_info:
+                        nick = user_info.get("user", {}).get("nick", "Unknown")
+                        self.root.after(0, lambda: self.log(f"   ✅ Authenticated as: {nick}", "success"))
+                        cookies_ok = True
+                    else:
+                        self.root.after(0, lambda: self.log("   ✅ Cookies valid (user info not available)", "success"))
+                        cookies_ok = True
+                else:
+                    self.root.after(0, lambda: self.log("   ❌ Cookies invalid or expired", "error"))
+                    self.root.after(0, lambda: self.log("   💡 Run: python export_cookies.py", "warning"))
+                
+                # Test 3: If game URL provided, check game access
+                if game_url and cookies_ok:
+                    self.root.after(0, lambda: self.log("\n3️⃣ Testing game access...", "info"))
+                    game_id = api._get_game_id_from_url(game_url)
+                    game_type = api._get_game_type_from_url(game_url)
+                    
+                    if game_id:
+                        game_state = api.get_game_state(game_id, game_type)
+                        if game_state.get("state") != "unknown":
+                            current_round = game_state.get("current_round", 1)
+                            total_rounds = game_state.get("total_rounds", 0)
+                            state = game_state.get("state", "")
+                            is_finished = game_state.get("is_finished", False)
+                            game_mode = game_state.get("game_mode", "1v1")
+                            
+                            self.root.after(0, lambda: self.log(f"   ✅ Game accessible", "success"))
+                            self.root.after(0, lambda: self.log(f"   📍 Current round: {current_round}", "info"))
+                            self.root.after(0, lambda: self.log(f"   🎮 Game mode: {game_mode}", "info"))
+                            self.root.after(0, lambda: self.log(f"   📊 State: {state}", "info"))
+                            if is_finished:
+                                self.root.after(0, lambda: self.log(f"   ⚠️ Game is finished", "warning"))
+                        else:
+                            self.root.after(0, lambda: self.log("   ❌ Cannot access game - check URL or auth", "error"))
+                    else:
+                        self.root.after(0, lambda: self.log("   ⚠️ Could not parse game ID from URL", "warning"))
+                        
+            except Exception as e:
+                self.root.after(0, lambda: self.log(f"   ❌ Cookie test error: {e}", "error"))
+            
+            # Summary
+            self.root.after(0, lambda: self.log("\n" + "="*40, "info"))
+            if ml_ok and cookies_ok:
+                self.root.after(0, lambda: self.log("✅ All tests passed - ready to play!", "success"))
+                self.root.after(0, lambda: self.set_status("Ready", self.colors['success']))
+            elif ml_ok:
+                self.root.after(0, lambda: self.log("⚠️ ML API OK but cookies need refresh", "warning"))
+                self.root.after(0, lambda: self.set_status("Cookies Invalid", self.colors['warning']))
+            else:
+                self.root.after(0, lambda: self.log("❌ Tests failed - check errors above", "error"))
+                self.root.after(0, lambda: self.set_status("Not Ready", self.colors['error']))
+            
+            self.root.after(0, lambda: self.test_api_btn.configure(state='normal'))
         
         # Run in thread to avoid blocking UI
         threading.Thread(target=run_test, daemon=True).start()
@@ -406,13 +556,13 @@ class GeoBotGUI:
         try:
             chrome_port = int(self.chrome_port_var.get())
             ml_port = int(self.ml_port_var.get())
-            rounds = int(self.rounds_var.get())
         except ValueError:
-            messagebox.showerror("Error", "Invalid port or rounds number!")
+            messagebox.showerror("Error", "Invalid port number!")
             return
             
         game_url = self.game_url_var.get().strip()
         ml_api_url = f"http://127.0.0.1:{ml_port}/api/v1/predict"
+        game_type = self._detect_game_type(game_url)
         
         # Reset state
         self.should_stop.clear()
@@ -423,6 +573,7 @@ class GeoBotGUI:
         for item in self.results_tree.get_children():
             self.results_tree.delete(item)
         self.summary_label.configure(text="")
+        self._update_round_display(0, 0)
         
         # Update UI
         self.start_btn.configure(state='disabled')
@@ -442,7 +593,7 @@ class GeoBotGUI:
                 self.log(f"{'='*50}", "highlight")
                 self.log(f"   Chrome Port: {chrome_port}")
                 self.log(f"   ML API: {ml_api_url}")
-                self.log(f"   Rounds: {rounds}")
+                self.log(f"   Detected Game Type: {game_type}")
                 
                 # Create bot
                 self.duels_bot = DuelsBot(
@@ -478,21 +629,40 @@ class GeoBotGUI:
                     import time
                     time.sleep(3)
                 
-                # Get game info
+                # Get game info from browser URL (may be different from input if redirected)
                 game_id = self.duels_bot.get_game_id_from_url()
-                game_type = self.duels_bot.get_game_type_from_url()
+                actual_game_type = self.duels_bot.get_game_type_from_url()
                 
                 if not game_id:
                     self.log("❌ Could not determine game ID from URL", "error")
                     return
                     
                 self.log(f"   Game ID: {game_id}")
-                self.log(f"   Game Type: {game_type}")
+                self.log(f"   Game Type: {actual_game_type}")
+                
+                # Set up self reference for callbacks
+                gui_self = self
+                
+                # Get initial game state to determine rounds
+                from geoguessr_api import GeoGuessrAPI
+                api = GeoGuessrAPI()
+                api.load_cookies_from_selenium(self.duels_bot.driver)
+                game_state = api.get_game_state(game_id, actual_game_type)
+                total_rounds = game_state.get("total_rounds", 0)
+                current_round = game_state.get("current_round", 1)
+                game_mode = game_state.get("game_mode", "1v1")
+                
+                self.log(f"   Game Mode: {game_mode}")
+                if total_rounds > 0:
+                    self.log(f"   Total Rounds: {total_rounds}")
+                else:
+                    self.log(f"   Total Rounds: dynamic (until game ends)")
+                
+                gui_self.root.after(0, lambda: gui_self._update_round_display(current_round, total_rounds))
                 
                 self.set_status("Running", self.colors['success'])
                 
                 # Set up confirmation callback for the bot
-                gui_self = self
                 
                 def wait_for_gui_confirmation():
                     """Called by bot to wait for user confirmation"""
@@ -519,29 +689,42 @@ class GeoBotGUI:
                 def on_round_complete(round_state):
                     if round_state:
                         gui_self.results_data.append(round_state)
-                        gui_self.root.after(0, lambda rs=round_state: gui_self.update_results_table(rs))
+                        gui_self.root.after(0, lambda rs=round_state, gt=actual_game_type: gui_self.update_results_table(rs, gt))
                         gui_self.save_result_to_csv(round_state)
                         
-                        if round_state.score:
-                            gui_self.log(f"✓ Score: {round_state.score} pts", "success")
-                        if round_state.distance_meters:
-                            gui_self.log(f"   Distance: {round_state.distance_meters/1000:.2f} km", "info")
+                        # Update round display
+                        current_r = round_state.round_number
+                        gui_self.root.after(0, lambda: gui_self._update_round_display(current_r, total_rounds))
+                
+                # Assign round complete callback to the bot
+                self.duels_bot.on_round_complete = on_round_complete
+                
+                # For duels/team-duels, don't limit rounds - play until game ends
+                # For classic/live-challenge, use detected total or default
+                max_rounds = 999 if actual_game_type in ("duels", "team-duels") else (total_rounds or 5)
                 
                 # Play game using the bot's play_game method
-                result = self.duels_bot.play_game(game_url=game_url if game_url else None, num_rounds=rounds)
+                result = self.duels_bot.play_game(game_url=game_url if game_url else None, num_rounds=max_rounds)
                 
                 # Process results from the game
                 if result:
                     for round_state in result.rounds:
                         if round_state not in self.results_data:
                             self.results_data.append(round_state)
-                            self.root.after(0, lambda rs=round_state: self.update_results_table(rs))
+                            self.root.after(0, lambda rs=round_state, gt=actual_game_type: self.update_results_table(rs, gt))
                             self.save_result_to_csv(round_state)
                 
-                # Game complete
-                total = sum(r.score or 0 for r in self.results_data)
+                # Game complete - show summary based on game type
                 self.log(f"\n{'='*50}", "success")
-                self.log(f"🏆 GAME COMPLETE - Total: {total} pts", "success")
+                if actual_game_type in ("duels", "team-duels"):
+                    total_damage = sum(getattr(r, 'damage', 0) or 0 for r in self.results_data)
+                    if total_damage >= 0:
+                        self.log(f"🏆 GAME COMPLETE - Net damage: +{total_damage} HP", "success")
+                    else:
+                        self.log(f"🏆 GAME COMPLETE - Net damage: {total_damage} HP", "success")
+                else:
+                    total = sum(r.score or 0 for r in self.results_data)
+                    self.log(f"🏆 GAME COMPLETE - Total: {total} pts", "success")
                 self.log(f"{'='*50}", "success")
                 
                 if self.results_file:
@@ -570,6 +753,7 @@ class GeoBotGUI:
         self.stop_btn.configure(state='disabled')
         self.next_btn.configure(state='disabled')
         self.set_status("Ready", self.colors['text_secondary'])
+        self.round_label.configure(text="-/-")
         
     def stop_bot(self):
         """Stop the bot"""
