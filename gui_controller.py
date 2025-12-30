@@ -56,6 +56,8 @@ class GeoBotGUI:
         # Results tracking
         self.results_file: Optional[str] = None
         self.results_data = []
+        self.current_game_type: Optional[str] = None  # Track game type for CSV path
+        self.current_game_url: Optional[str] = None   # Track game URL for CSV logging
         
         # Modern color scheme
         self.colors = {
@@ -417,20 +419,24 @@ class GeoBotGUI:
             self.summary_label.configure(text=f"Total: {total_score} pts | Avg: {avg_dist/1000:.1f} km")
         
     def save_result_to_csv(self, round_state: 'RoundState'):
-        """Save round result to CSV file"""
+        """Save round result to CSV file in results/<game-mode>/results-<timestamp>.csv"""
         if not self.results_file:
-            results_dir = Path(self.results_dir_var.get())
-            results_dir.mkdir(exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            self.results_file = results_dir / f"game_results_{timestamp}.csv"
+            # Create directory structure: results/<game-mode>/
+            base_results_dir = Path(self.results_dir_var.get())
+            game_mode = self.current_game_type or "unknown"
+            results_dir = base_results_dir / game_mode
+            results_dir.mkdir(parents=True, exist_ok=True)
             
-            # Write header
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.results_file = results_dir / f"results-{timestamp}.csv"
+            
+            # Write header (game_url included but not shown in GUI)
             with open(self.results_file, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['round', 'predicted_lat', 'predicted_lng', 'true_lat', 'true_lng', 
-                               'distance_km', 'score', 'damage', 'timestamp'])
+                               'distance_km', 'score', 'damage', 'timestamp', 'game_url'])
         
-        # Append result
+        # Append result (game_url saved in CSV but not displayed in GUI)
         with open(self.results_file, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
@@ -442,7 +448,8 @@ class GeoBotGUI:
                 round_state.distance_meters / 1000 if round_state.distance_meters else None,
                 round_state.score,
                 getattr(round_state, 'damage', None),
-                round_state.timestamp
+                round_state.timestamp,
+                self.current_game_url or ""
             ])
     
     def test_api_connection(self):
@@ -585,6 +592,8 @@ class GeoBotGUI:
         self.should_stop.clear()
         self.results_file = None
         self.results_data = []
+        self.current_game_type = None
+        self.current_game_url = None
         
         # Clear results table
         for item in self.results_tree.get_children():
@@ -658,6 +667,10 @@ class GeoBotGUI:
                     
                 self.log(f"   Game ID: {game_id}")
                 self.log(f"   Game Type: {actual_game_type}")
+                
+                # Store game type and URL for CSV logging
+                self.current_game_type = actual_game_type
+                self.current_game_url = self.duels_bot.driver.current_url if self.duels_bot.driver else game_url
                 
                 # Set up self reference for callbacks
                 gui_self = self

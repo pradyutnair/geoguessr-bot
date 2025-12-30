@@ -338,6 +338,70 @@ class PanoramaDownloader:
         
         return panorama
 
+    def download_panorama_hq(
+        self,
+        pano_id: str,
+        zoom: int = 4,
+        output_size: Tuple[int, int] = (8192, 4096)
+    ) -> Optional[Image.Image]:
+        """
+        Download a high-quality panorama matching streetview library output.
+        
+        Uses zoom level 4 (16x8 = 128 tiles) for high resolution,
+        same as the streetview library default.
+        
+        Args:
+            pano_id: Google Street View panorama ID
+            zoom: Tile zoom level (default 4 for HQ)
+            output_size: Output image size (default 8192x4096)
+        
+        Returns:
+            PIL Image or None if download failed
+        """
+        if pano_id is None:
+            print("   ❌ No panorama ID provided")
+            return None
+        
+        if zoom not in self.ZOOM_DIMENSIONS:
+            zoom = 4
+        
+        cols, rows = self.ZOOM_DIMENSIONS[zoom]
+        total_tiles = cols * rows
+        print(f"   📥 Downloading HQ panorama {pano_id[:20]}... (zoom={zoom}, {total_tiles} tiles)")
+        
+        # Download all tiles
+        tiles = {}
+        downloaded = 0
+        for y in range(rows):
+            for x in range(cols):
+                tile = self.download_tile(pano_id, zoom, x, y)
+                if tile:
+                    tiles[(x, y)] = tile
+                    downloaded += 1
+        
+        if not tiles:
+            print("   ❌ Failed to download any tiles")
+            return None
+        
+        print(f"   ✓ Downloaded {downloaded}/{total_tiles} tiles")
+        
+        # Stitch tiles into full panorama
+        pano_width = cols * self.TILE_SIZE
+        pano_height = rows * self.TILE_SIZE
+        panorama = Image.new('RGB', (pano_width, pano_height))
+        
+        for (x, y), tile in tiles.items():
+            panorama.paste(tile, (x * self.TILE_SIZE, y * self.TILE_SIZE))
+        
+        print(f"   ✅ Stitched panorama: {pano_width}x{pano_height}")
+        
+        # Resize if needed
+        if output_size != (pano_width, pano_height):
+            panorama = panorama.resize(output_size, Image.Resampling.LANCZOS)
+            print(f"   ✅ Resized to: {output_size[0]}x{output_size[1]}")
+        
+        return panorama
+
 
 class DuelsBot:
     """
