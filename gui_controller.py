@@ -653,12 +653,9 @@ class GeoBotGUI:
                 game_mode = game_state.get("game_mode", "1v1")
                 
                 self.log(f"   Game Mode: {game_mode}")
-                if total_rounds > 0:
-                    self.log(f"   Total Rounds: {total_rounds}")
-                else:
-                    self.log(f"   Total Rounds: dynamic (until game ends)")
+                self.log(f"   Rounds: until game ends or stopped")
                 
-                gui_self.root.after(0, lambda: gui_self._update_round_display(current_round, total_rounds))
+                gui_self.root.after(0, lambda: gui_self._update_round_display(current_round, 0))
                 
                 self.set_status("Running", self.colors['success'])
                 
@@ -699,12 +696,8 @@ class GeoBotGUI:
                 # Assign round complete callback to the bot
                 self.duels_bot.on_round_complete = on_round_complete
                 
-                # For duels/team-duels, don't limit rounds - play until game ends
-                # For classic/live-challenge, use detected total or default
-                max_rounds = 999 if actual_game_type in ("duels", "team-duels") else (total_rounds or 5)
-                
-                # Play game using the bot's play_game method
-                result = self.duels_bot.play_game(game_url=game_url if game_url else None, num_rounds=max_rounds)
+                # Play game - no max rounds limit, plays until game ends or user stops
+                result = self.duels_bot.play_game(game_url=game_url if game_url else None)
                 
                 # Process results from the game
                 if result:

@@ -839,9 +839,39 @@ class GeoGuessrAPI:
         state = game_info.get("state", "")
         is_finished = state in ["finished", "ended"]
         
-        # Total rounds varies by game type and can change dynamically in duels
+        # Total rounds varies by game type
+        # Try multiple field names that different game types might use
+        total_rounds = 0
+        
+        # Try direct numberOfRounds field
+        if game_info.get("numberOfRounds"):
+            total_rounds = game_info.get("numberOfRounds")
+        
+        # Try totalRounds field
+        if not total_rounds and game_info.get("totalRounds"):
+            total_rounds = game_info.get("totalRounds")
+        
+        # Try rounds array length (but only if all rounds are present)
         rounds = game_info.get("rounds", [])
-        total_rounds = len(rounds) if rounds else 0
+        
+        # Check options for round settings
+        options = game_info.get("options", {})
+        if options:
+            max_rounds = options.get("maxRounds") or options.get("rounds") or options.get("numberOfRounds")
+            if max_rounds:
+                total_rounds = max(total_rounds, max_rounds)
+        
+        # For live-challenge, check gameSettings
+        game_settings = game_info.get("gameSettings", {})
+        if game_settings:
+            settings_rounds = game_settings.get("numberOfRounds") or game_settings.get("rounds")
+            if settings_rounds:
+                total_rounds = max(total_rounds, settings_rounds)
+        
+        # If we still don't have total_rounds, use rounds array length
+        # but only if it seems complete (> 1) or we have no other info
+        if not total_rounds and rounds:
+            total_rounds = len(rounds)
         
         # For duels, check if it's team mode
         game_mode = "1v1"
@@ -849,14 +879,6 @@ class GeoGuessrAPI:
         if teams:
             # Team duels have teams array
             game_mode = "team"
-            # Team duels can go to 6 rounds
-        
-        # Check options for round settings
-        options = game_info.get("options", {})
-        if options:
-            max_rounds = options.get("maxRounds") or options.get("rounds")
-            if max_rounds:
-                total_rounds = max(total_rounds, max_rounds)
         
         return {
             "current_round": current_round,

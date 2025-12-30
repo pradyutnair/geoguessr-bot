@@ -1322,13 +1322,12 @@ class DuelsBot:
         except Exception:
             return False, None
     
-    def play_game(self, game_url: Optional[str] = None, num_rounds: int = 5) -> Optional[DuelState]:
+    def play_game(self, game_url: Optional[str] = None) -> Optional[DuelState]:
         """
-        Play a full duel game.
+        Play a full game until it ends or user stops.
         
         Args:
-            game_url: URL of the duel game (optional if already on game page)
-            num_rounds: Maximum number of rounds (use large number for duels which can vary)
+            game_url: URL of the game (optional if already on game page)
         
         Returns:
             DuelState with game results
@@ -1376,25 +1375,21 @@ class DuelsBot:
         self._log(f"   Game Type: {game_type}")
         self._log(f"   ML API: {self.ml_api_url}")
         self._log(f"   Starting from round: {starting_round}")
-        
-        # For duels/team-duels, rounds are dynamic - don't show fixed number
-        if game_type in ("duels", "team-duels"):
-            self._log(f"   Rounds: dynamic (until game ends)")
-        else:
-            self._log(f"   Max Rounds: {num_rounds}")
+        self._log(f"   Rounds: until game ends or stopped")
         self._log(f"{'='*60}")
         
         # Initialize game state
         self.current_game = DuelState(
             game_id=game_id,
             game_type=game_type,
-            total_rounds=num_rounds,
+            total_rounds=0,  # Unknown - play until game ends
             current_round=starting_round,
         )
         
         # Play rounds with manual confirmation - start from detected round
+        # Loop indefinitely until game ends or user stops
         round_num = starting_round - 1  # Will be incremented at start of loop
-        while round_num < num_rounds:
+        while True:
             round_num += 1
             
             if self.should_stop.is_set():
