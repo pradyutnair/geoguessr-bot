@@ -82,6 +82,7 @@ class GeoBotGUI:
         self.game_type_var = tk.StringVar(value="auto")  # Auto-detected game type
         self.current_round_var = tk.StringVar(value="-")
         self.total_rounds_var = tk.StringVar(value="-")
+        self.image_mode_var = tk.StringVar(value="screenshot")  # screenshot or panorama
         
         # Add trace on game URL to auto-detect game type
         self.game_url_var.trace_add("write", self._on_url_change)
@@ -151,6 +152,22 @@ class GeoBotGUI:
             activeforeground=self.colors['text'], cursor='hand2'
         )
         self.new_session_cb.pack(side=tk.LEFT, padx=(12, 0))
+        
+        # Image Mode dropdown
+        image_mode_frame = tk.Frame(row1, bg=self.colors['surface'])
+        image_mode_frame.pack(side=tk.LEFT, padx=(12, 0))
+        tk.Label(image_mode_frame, text="Image Mode", font=('Helvetica', 10),
+                bg=self.colors['surface'], fg=self.colors['text_secondary']).pack(anchor='w')
+        self.image_mode_combo = ttk.Combobox(
+            image_mode_frame, textvariable=self.image_mode_var,
+            values=["screenshot", "panorama"], state="readonly",
+            width=10, font=('Helvetica', 10)
+        )
+        self.image_mode_combo.pack(anchor='w', pady=(4, 0))
+        # Style the combobox
+        style = ttk.Style()
+        style.configure("TCombobox", fieldbackground=self.colors['bg'], 
+                       background=self.colors['surface'])
         
         # Row 2: Game URL
         row2 = tk.Frame(settings_inner, bg=self.colors['surface'])
@@ -596,10 +613,12 @@ class GeoBotGUI:
                 self.log(f"   Detected Game Type: {game_type}")
                 
                 # Create bot
+                use_screenshot = self.image_mode_var.get() == "screenshot"
+                self.log(f"   Image Mode: {self.image_mode_var.get()}")
                 self.duels_bot = DuelsBot(
                     chrome_debug_port=chrome_port,
                     ml_api_url=ml_api_url,
-                    use_screenshot=True,
+                    use_screenshot=use_screenshot,
                 )
                 
                 # Connect to Chrome

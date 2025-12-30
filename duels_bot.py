@@ -51,6 +51,37 @@ except ImportError:
 from geoguessr_api import GeoGuessrAPI, GuessResult
 
 
+def decode_pano_id(pano_id: str) -> str:
+    """
+    Decode a potentially hex-encoded panorama ID.
+    
+    GeoGuessr sometimes stores pano IDs as hex-encoded strings in their HTML.
+    Real pano IDs contain characters like _ and - while hex strings are purely alphanumeric.
+    Real pano IDs are typically 22-44 chars, hex encoded would be 44-88 chars.
+    """
+    if not pano_id:
+        return pano_id
+    
+    # If it contains _ or - it's definitely a real pano ID
+    if '_' in pano_id or '-' in pano_id:
+        return pano_id
+    
+    # Check if it looks like hex (all hex chars and even length)
+    if len(pano_id) >= 40 and len(pano_id) % 2 == 0:
+        try:
+            # Check if all characters are valid hex
+            if all(c in '0123456789abcdefABCDEF' for c in pano_id):
+                # Try to decode as hex
+                decoded = bytes.fromhex(pano_id).decode('utf-8')
+                # Verify it looks like a valid pano ID (alphanumeric with _ and -)
+                if all(c.isalnum() or c in '_-' for c in decoded):
+                    return decoded
+        except (ValueError, UnicodeDecodeError):
+            pass
+    
+    return pano_id
+
+
 @dataclass
 class RoundState:
     """State for a single round in a duel."""
@@ -87,8 +118,10 @@ class PanoramaDownloader:
     """Downloads panorama images from Google Street View using pano IDs."""
     
     # Google Street View tile servers (try multiple formats)
-    # New format used by GeoGuessr
-    TILE_URL_NEW = "https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid={pano_id}&output=tile&x={x}&y={y}&zoom={zoom}&nbt=1&fover=2"
+    # Geo GGPHT format (most reliable, works without API key)
+    TILE_URL_GEO = "https://geo0.ggpht.com/cbk?cb_client=maps_sv.tactile&output=tile&panoid={pano_id}&zoom={zoom}&x={x}&y={y}"
+    # New streetviewpixels format
+    TILE_URL_NEW = "https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=maps_sv.tactile&panoid={pano_id}&x={x}&y={y}&zoom={zoom}&nbt=1&fover=2"
     # Old CBK format (fallback)
     TILE_URL_OLD = "https://cbk0.google.com/cbk?output=tile&panoid={pano_id}&zoom={zoom}&x={x}&y={y}"
     
@@ -110,31 +143,35 @@ class PanoramaDownloader:
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         })
         self.timeout = timeout
-        self.use_new_api = True  # Start with new API
+        self.api_index = 0  # Start with geo API (most reliable)
+        self.apis = ['geo', 'new', 'old']
+    
+    def _get_tile_url(self, pano_id: str, zoom: int, x: int, y: int, api: str) -> str:
+        """Get the tile URL for the specified API."""
+        if api == 'geo':
+            return self.TILE_URL_GEO.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
+        elif api == 'new':
+            return self.TILE_URL_NEW.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
+        else:
+            return self.TILE_URL_OLD.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
     
     def download_tile(self, pano_id: str, zoom: int, x: int, y: int) -> Optional[Image.Image]:
-        """Download a single panorama tile."""
-        # Try new API first
-        if self.use_new_api:
-            url = self.TILE_URL_NEW.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
-        else:
-            url = self.TILE_URL_OLD.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
-        
-        try:
-            response = self.session.get(url, timeout=self.timeout)
-            if response.status_code == 200:
-                return Image.open(io.BytesIO(response.content))
-            elif response.status_code == 404 and self.use_new_api:
-                # Try old API as fallback
-                self.use_new_api = False
-                url = self.TILE_URL_OLD.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
+        """Download a single panorama tile, trying multiple APIs if needed."""
+        # Try each API starting from the current preferred one
+        for i in range(len(self.apis)):
+            api = self.apis[(self.api_index + i) % len(self.apis)]
+            url = self._get_tile_url(pano_id, zoom, x, y, api)
+            
+            try:
                 response = self.session.get(url, timeout=self.timeout)
                 if response.status_code == 200:
+                    # Update preferred API if we found a working one
+                    self.api_index = (self.api_index + i) % len(self.apis)
                     return Image.open(io.BytesIO(response.content))
-            return None
-        except Exception as e:
-            print(f"   ⚠️ Failed to download tile ({x},{y}): {e}")
-            return None
+            except Exception:
+                continue
+        
+        return None
     
     def download_panorama(
         self, 
@@ -515,15 +552,17 @@ class DuelsBot:
         try:
             js_code = """
             // Check page source for panoId patterns
+            // Note: pano IDs can be normal (with _ and -) or hex-encoded (pure alphanumeric)
             const html = document.documentElement.innerHTML;
             const patterns = [
                 /"panoId":"([A-Za-z0-9_-]+)"/,
                 /"pano":"([A-Za-z0-9_-]+)"/,
                 /panoid=([A-Za-z0-9_-]+)/,
+                /"imageDataId":"([A-Za-z0-9]+)"/,  // hex-encoded IDs are purely alphanumeric
             ];
             for (const pattern of patterns) {
                 const match = html.match(pattern);
-                if (match) {
+                if (match && match[1].length >= 20) {  // pano IDs are at least 20 chars
                     return match[1];
                 }
             }
@@ -531,6 +570,7 @@ class DuelsBot:
             """
             pano_id = self.driver.execute_script(js_code)
             if pano_id:
+                pano_id = decode_pano_id(pano_id)
                 self._log(f"   📍 Found pano ID in HTML: {pano_id[:20]}...")
                 return pano_id
         except Exception as e:
@@ -543,12 +583,12 @@ class DuelsBot:
                 r'"panoId":"([A-Za-z0-9_-]+)"',
                 r'"pano":"([A-Za-z0-9_-]+)"',
                 r'panoid=([A-Za-z0-9_-]+)',
-                r'"imageDataId":"([A-Za-z0-9_-]+)"',
+                r'"imageDataId":"([A-Za-z0-9]+)"',  # hex-encoded IDs are purely alphanumeric
             ]
             for pattern in patterns:
                 match = re.search(pattern, html)
                 if match:
-                    pano_id = match.group(1)
+                    pano_id = decode_pano_id(match.group(1))
                     self._log(f"   📍 Found pano ID in source: {pano_id[:20]}...")
                     return pano_id
         except Exception as e:
