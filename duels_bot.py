@@ -35,6 +35,7 @@ from typing import Optional, Dict, Any, List, Tuple, Callable
 
 import requests
 from PIL import Image
+from streetview import get_panorama as sv_get_panorama
 
 # Try to import selenium - needed for panorama extraction
 try:
@@ -115,80 +116,32 @@ class DuelState:
 
 
 class PanoramaDownloader:
-    """Downloads panorama images from Google Street View using pano IDs."""
+    """Downloads panorama images from Google Street View using the streetview library."""
     
-    # Google Street View tile servers (try multiple formats)
-    # Geo GGPHT format (most reliable, works without API key)
-    TILE_URL_GEO = "https://geo0.ggpht.com/cbk?cb_client=maps_sv.tactile&output=tile&panoid={pano_id}&zoom={zoom}&x={x}&y={y}"
-    # New streetviewpixels format
-    TILE_URL_NEW = "https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=maps_sv.tactile&panoid={pano_id}&x={x}&y={y}&zoom={zoom}&nbt=1&fover=2"
-    # Old CBK format (fallback)
-    TILE_URL_OLD = "https://cbk0.google.com/cbk?output=tile&panoid={pano_id}&zoom={zoom}&x={x}&y={y}"
-    
-    # Tile dimensions at different zoom levels
-    ZOOM_DIMENSIONS = {
-        0: (1, 1),      # 512x512
-        1: (2, 1),      # 1024x512
-        2: (4, 2),      # 2048x1024
-        3: (8, 4),      # 4096x2048
-        4: (16, 8),     # 8192x4096
-        5: (32, 16),    # 16384x8192
-    }
-    
-    TILE_SIZE = 512
-    
-    def __init__(self, timeout: int = 10):
-        self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        })
-        self.timeout = timeout
-        self.api_index = 0  # Start with geo API (most reliable)
-        self.apis = ['geo', 'new', 'old']
-    
-    def _get_tile_url(self, pano_id: str, zoom: int, x: int, y: int, api: str) -> str:
-        """Get the tile URL for the specified API."""
-        if api == 'geo':
-            return self.TILE_URL_GEO.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
-        elif api == 'new':
-            return self.TILE_URL_NEW.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
-        else:
-            return self.TILE_URL_OLD.format(pano_id=pano_id, zoom=zoom, x=x, y=y)
-    
-    def download_tile(self, pano_id: str, zoom: int, x: int, y: int) -> Optional[Image.Image]:
-        """Download a single panorama tile, trying multiple APIs if needed."""
-        # Try each API starting from the current preferred one
-        for i in range(len(self.apis)):
-            api = self.apis[(self.api_index + i) % len(self.apis)]
-            url = self._get_tile_url(pano_id, zoom, x, y, api)
-            
-            try:
-                response = self.session.get(url, timeout=self.timeout)
-                if response.status_code == 200:
-                    # Update preferred API if we found a working one
-                    self.api_index = (self.api_index + i) % len(self.apis)
-                    return Image.open(io.BytesIO(response.content))
-            except Exception:
-                continue
+    def __init__(self, timeout: int = 30):
+        """Initialize the panorama downloader.
         
-        return None
+        Args:
+            timeout: Not used (kept for backwards compatibility)
+        """
+        pass
     
     def download_panorama(
         self, 
         pano_id: str, 
-        zoom: int = 2,
+        zoom: int = 1,
         heading: float = 0.0,
         fov: float = 90.0,
         output_size: Tuple[int, int] = (1024, 512)
     ) -> Optional[Image.Image]:
         """
-        Download a panorama and optionally extract a view at specific heading.
+        Download a panorama using the streetview library.
         
         Args:
             pano_id: Google Street View panorama ID
-            zoom: Tile zoom level (0-5, higher = more detail)
-            heading: View direction in degrees (0 = north, 90 = east)
-            fov: Field of view in degrees
+            zoom: Tile zoom level (0-5, default 1 for fast download)
+            heading: View direction in degrees (not used, full pano returned)
+            fov: Field of view in degrees (not used, full pano returned)
             output_size: Output image size (width, height)
         
         Returns:
@@ -198,209 +151,55 @@ class PanoramaDownloader:
             print("   ❌ No panorama ID provided")
             return None
         
-        print(f"   📥 Downloading panorama {pano_id[:20]}... (zoom={zoom})")
+        print(f"   📥 Downloading panorama {pano_id}... (zoom={zoom})")
         
-        # Get tile grid dimensions for this zoom level
-        if zoom not in self.ZOOM_DIMENSIONS:
-            zoom = 2  # Default to reasonable zoom
-        
-        cols, rows = self.ZOOM_DIMENSIONS[zoom]
-        
-        # Download all tiles
-        tiles = {}
-        for y in range(rows):
-            for x in range(cols):
-                tile = self.download_tile(pano_id, zoom, x, y)
-                if tile:
-                    tiles[(x, y)] = tile
-        
-        if not tiles:
-            print("   ❌ Failed to download any tiles")
+        try:
+            # Use streetview library with multi-threading for speed
+            panorama = sv_get_panorama(pano_id=pano_id, zoom=zoom, multi_threaded=True)
+            
+            if panorama is None:
+                print("   ❌ streetview library returned None")
+                return None
+            
+            # Check if the image is mostly black (download failed silently)
+            pixels = list(panorama.getdata())
+            sample_size = min(1000, len(pixels))
+            non_black = sum(1 for p in pixels[:sample_size] if (p[0] > 10 if isinstance(p, tuple) else p > 10))
+            if non_black < sample_size * 0.1:  # Less than 10% non-black pixels
+                print(f"   ❌ Downloaded image is mostly black ({non_black}/{sample_size} non-black pixels)")
+                return None
+            
+            print(f"   ✅ Downloaded panorama: {panorama.size[0]}x{panorama.size[1]}")
+            
+            # Resize to output size if needed
+            if output_size and output_size != panorama.size:
+                panorama = panorama.resize(output_size, Image.Resampling.LANCZOS)
+                print(f"   ✅ Resized to: {output_size[0]}x{output_size[1]}")
+            
+            return panorama
+            
+        except Exception as e:
+            print(f"   ❌ Failed to download panorama: {e}")
             return None
-        
-        # Stitch tiles into full panorama
-        pano_width = cols * self.TILE_SIZE
-        pano_height = rows * self.TILE_SIZE
-        panorama = Image.new('RGB', (pano_width, pano_height))
-        
-        for (x, y), tile in tiles.items():
-            panorama.paste(tile, (x * self.TILE_SIZE, y * self.TILE_SIZE))
-        
-        print(f"   ✅ Downloaded panorama: {pano_width}x{pano_height}")
-        
-        # Extract view at specific heading if requested
-        if heading != 0.0 or fov != 360.0:
-            panorama = self.extract_view(panorama, heading, fov, output_size)
-        else:
-            # Just resize to output size
-            panorama = panorama.resize(output_size, Image.Resampling.LANCZOS)
-        
-        return panorama
     
-    def extract_view(
-        self, 
-        panorama: Image.Image, 
-        heading: float, 
-        fov: float,
-        output_size: Tuple[int, int]
-    ) -> Image.Image:
-        """
-        Extract a view from a 360° panorama at a specific heading.
-        
-        Args:
-            panorama: Full 360° panorama image
-            heading: Direction to look (0-360 degrees)
-            fov: Field of view in degrees
-            output_size: Output image size
-        
-        Returns:
-            Extracted view as PIL Image
-        """
-        pano_width, pano_height = panorama.size
-        
-        # Calculate crop region based on heading and FOV
-        # Heading 0 = center of image, heading increases to the right
-        center_x = int((heading / 360.0) * pano_width) % pano_width
-        crop_width = int((fov / 360.0) * pano_width)
-        
-        # Calculate left and right bounds (handling wrap-around)
-        left = center_x - crop_width // 2
-        right = center_x + crop_width // 2
-        
-        if left < 0:
-            # Wrap around left edge
-            left_part = panorama.crop((pano_width + left, 0, pano_width, pano_height))
-            right_part = panorama.crop((0, 0, right, pano_height))
-            view = Image.new('RGB', (crop_width, pano_height))
-            view.paste(left_part, (0, 0))
-            view.paste(right_part, (-left, 0))
-        elif right > pano_width:
-            # Wrap around right edge
-            left_part = panorama.crop((left, 0, pano_width, pano_height))
-            right_part = panorama.crop((0, 0, right - pano_width, pano_height))
-            view = Image.new('RGB', (crop_width, pano_height))
-            view.paste(left_part, (0, 0))
-            view.paste(right_part, (pano_width - left, 0))
-        else:
-            view = panorama.crop((left, 0, right, pano_height))
-        
-        # Resize to output dimensions
-        return view.resize(output_size, Image.Resampling.LANCZOS)
-    
-    def download_multiple_views(
-        self,
-        pano_id: str,
-        headings: List[float] = [0, 90, 180, 270],
-        zoom: int = 2,
-        fov: float = 90.0,
-        output_size: Tuple[int, int] = (640, 480)
-    ) -> List[Image.Image]:
-        """
-        Download a panorama and extract views at multiple headings.
-        
-        Useful for models that expect multiple viewing angles.
-        """
-        # Download full panorama once
-        full_pano = self._download_full_panorama(pano_id, zoom)
-        if full_pano is None:
-            return []
-        
-        views = []
-        for heading in headings:
-            view = self.extract_view(full_pano, heading, fov, output_size)
-            views.append(view)
-        
-        return views
-    
-    def _download_full_panorama(self, pano_id: str, zoom: int = 2) -> Optional[Image.Image]:
-        """Download full 360° panorama without cropping."""
-        if zoom not in self.ZOOM_DIMENSIONS:
-            zoom = 2
-        
-        cols, rows = self.ZOOM_DIMENSIONS[zoom]
-        tiles = {}
-        
-        for y in range(rows):
-            for x in range(cols):
-                tile = self.download_tile(pano_id, zoom, x, y)
-                if tile:
-                    tiles[(x, y)] = tile
-        
-        if not tiles:
-            return None
-        
-        pano_width = cols * self.TILE_SIZE
-        pano_height = rows * self.TILE_SIZE
-        panorama = Image.new('RGB', (pano_width, pano_height))
-        
-        for (x, y), tile in tiles.items():
-            panorama.paste(tile, (x * self.TILE_SIZE, y * self.TILE_SIZE))
-        
-        return panorama
-
     def download_panorama_hq(
         self,
         pano_id: str,
         zoom: int = 4,
-        output_size: Tuple[int, int] = (8192, 4096)
+        output_size: Optional[Tuple[int, int]] = None
     ) -> Optional[Image.Image]:
         """
         Download a high-quality panorama matching streetview library output.
         
-        Uses zoom level 4 (16x8 = 128 tiles) for high resolution,
-        same as the streetview library default.
-        
         Args:
             pano_id: Google Street View panorama ID
             zoom: Tile zoom level (default 4 for HQ)
-            output_size: Output image size (default 8192x4096)
+            output_size: Optional output image size (default keeps original)
         
         Returns:
             PIL Image or None if download failed
         """
-        if pano_id is None:
-            print("   ❌ No panorama ID provided")
-            return None
-        
-        if zoom not in self.ZOOM_DIMENSIONS:
-            zoom = 4
-        
-        cols, rows = self.ZOOM_DIMENSIONS[zoom]
-        total_tiles = cols * rows
-        print(f"   📥 Downloading HQ panorama {pano_id[:20]}... (zoom={zoom}, {total_tiles} tiles)")
-        
-        # Download all tiles
-        tiles = {}
-        downloaded = 0
-        for y in range(rows):
-            for x in range(cols):
-                tile = self.download_tile(pano_id, zoom, x, y)
-                if tile:
-                    tiles[(x, y)] = tile
-                    downloaded += 1
-        
-        if not tiles:
-            print("   ❌ Failed to download any tiles")
-            return None
-        
-        print(f"   ✓ Downloaded {downloaded}/{total_tiles} tiles")
-        
-        # Stitch tiles into full panorama
-        pano_width = cols * self.TILE_SIZE
-        pano_height = rows * self.TILE_SIZE
-        panorama = Image.new('RGB', (pano_width, pano_height))
-        
-        for (x, y), tile in tiles.items():
-            panorama.paste(tile, (x * self.TILE_SIZE, y * self.TILE_SIZE))
-        
-        print(f"   ✅ Stitched panorama: {pano_width}x{pano_height}")
-        
-        # Resize if needed
-        if output_size != (pano_width, pano_height):
-            panorama = panorama.resize(output_size, Image.Resampling.LANCZOS)
-            print(f"   ✅ Resized to: {output_size[0]}x{output_size[1]}")
-        
-        return panorama
+        return self.download_panorama(pano_id, zoom=zoom, output_size=output_size)
 
 
 class DuelsBot:
@@ -559,6 +358,16 @@ class DuelsBot:
         
         return "classic"
     
+    def clear_performance_entries(self):
+        """Clear browser performance entries to prepare for new round."""
+        if not self.driver:
+            return
+        try:
+            self.driver.execute_script("performance.clearResourceTimings();")
+            self._log("   🧹 Cleared performance entries")
+        except Exception as e:
+            self._log(f"   ⚠️ Could not clear performance entries: {e}")
+    
     def extract_pano_id_from_browser(self) -> Optional[str]:
         """Extract panorama ID from the browser using multiple methods."""
         if not self.driver:
@@ -685,23 +494,48 @@ class DuelsBot:
         """Get panorama ID from API for a specific round."""
         game_data = self.get_round_data_from_api(game_id, game_type)
         if not game_data:
+            self._log(f"   ⚠️ API: No game data returned")
             return None
         
         # Try to find pano ID in the game data
         # Structure varies by game type
         try:
-            if game_type in ("duels", "live-challenge"):
+            if game_type in ("duels", "live-challenge", "team-duels"):
                 rounds = game_data.get("rounds", [])
+                self._log(f"   API: Found {len(rounds)} rounds in game data")
                 if round_number <= len(rounds):
                     round_data = rounds[round_number - 1]
-                    return round_data.get("panoId") or round_data.get("panoramaId")
+                    pano_id = None
+                    
+                    # For duels, pano ID is in panorama.panoId (hex-encoded)
+                    panorama = round_data.get("panorama", {})
+                    if isinstance(panorama, dict):
+                        pano_id = panorama.get("panoId") or panorama.get("id")
+                    
+                    # Fallback to direct field
+                    if not pano_id:
+                        pano_id = round_data.get("panoId") or round_data.get("panoramaId")
+                    
+                    if pano_id:
+                        # Decode hex-encoded pano ID if necessary
+                        decoded_pano_id = decode_pano_id(pano_id)
+                        self._log(f"   API: Round {round_number} pano ID: {decoded_pano_id[:20]}...")
+                        return decoded_pano_id
+                    else:
+                        self._log(f"   API: Round {round_number} has no pano ID field")
+                        # Debug: show what fields are available
+                        self._log(f"   API: Round data keys: {list(round_data.keys())[:10]}")
+                else:
+                    self._log(f"   API: Round {round_number} not yet in rounds array (len={len(rounds)})")
             elif game_type == "classic":
                 rounds = game_data.get("rounds", [])
                 if round_number <= len(rounds):
                     round_data = rounds[round_number - 1]
-                    return round_data.get("panoId")
+                    pano_id = round_data.get("panoId")
+                    if pano_id:
+                        return decode_pano_id(pano_id)
         except Exception as e:
-            pass
+            self._log(f"   ⚠️ API extraction error: {e}")
         
         return None
     
@@ -1052,12 +886,16 @@ class DuelsBot:
         # Try to get pano ID from API first (more reliable)
         self._log("🔍 Getting panorama ID...")
         pano_id = self.get_pano_id_from_api(game_id, game_type, round_number)
+        self._log(f"   API pano ID: {pano_id[:20] if pano_id else 'None'}...")
         
         # Fallback to browser extraction
         if not pano_id:
-            pano_id = self.extract_pano_id_from_browser()
+            browser_pano_id = self.extract_pano_id_from_browser()
+            self._log(f"   Browser pano ID: {browser_pano_id[:20] if browser_pano_id else 'None'}...")
+            pano_id = browser_pano_id
         
         round_state.pano_id = pano_id
+        self._log(f"   ✅ Using pano ID: {pano_id[:20] if pano_id else 'None'}...")
         
         if self.on_round_start:
             try:
@@ -1073,14 +911,12 @@ class DuelsBot:
             self._log("📸 Taking screenshot...")
             image = self.take_panorama_screenshot()
         else:
-            # Download panorama tiles (optional, higher quality but slower)
+            # Download panorama using streetview library (fast)
             if pano_id:
-                self._log("📥 Downloading panorama...")
+                self._log("📥 Downloading panorama via streetview library...")
                 image = self.panorama_downloader.download_panorama(
                     pano_id, 
-                    zoom=2,
-                    heading=0,
-                    fov=90,
+                    zoom=1,
                     output_size=(1024, 512)
                 )
             
@@ -1092,10 +928,13 @@ class DuelsBot:
             self._log("❌ Failed to get any image")
             return round_state
         
-        # Save panorama for debugging
+        # Save panorama for debugging with timestamp to verify uniqueness
         debug_dir = Path("debug_panoramas")
         debug_dir.mkdir(exist_ok=True)
-        image.save(debug_dir / f"round_{round_number}.png")
+        timestamp = datetime.now().strftime("%H%M%S")
+        debug_filename = f"round_{round_number}_{timestamp}.png"
+        image.save(debug_dir / debug_filename)
+        self._log(f"   💾 Saved debug image: {debug_filename} ({image.size[0]}x{image.size[1]})")
         
         # Get ML prediction
         self._log("🔮 Getting ML prediction...")
@@ -1232,6 +1071,9 @@ class DuelsBot:
                 self.on_round_complete(round_state)
             except Exception as e:
                 self._log(f"   ⚠️ Callback error: {e}")
+        
+        # Clear performance entries at END of round so next round gets fresh entries
+        self.clear_performance_entries()
         
         return round_state
     

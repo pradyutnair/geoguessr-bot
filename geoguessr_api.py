@@ -957,6 +957,79 @@ class GeoGuessrAPI:
             print(f"   ⚠️ Error starting new session: {e}")
             return False
     
+    def log_result_to_server(
+        self,
+        ml_api_url: str,
+        result: GuessResult,
+        round_number: int,
+        pred_lat: float,
+        pred_lng: float,
+        model_name: str = "unknown",
+    ) -> bool:
+        """
+        Log a game result to the ML server for analysis.
+        
+        Sends the prediction, ground truth, score, and distance to the
+        ML server's logging endpoint for CSV recording and visualization.
+        
+        The server computes cell assignments automatically from the true location
+        and model checkpoint (no client-side cell information needed).
+        
+        Args:
+            ml_api_url: The ML API predict endpoint URL
+                       (e.g., "http://127.0.0.1:5000/api/v1/predict")
+            result: GuessResult from submit_guess()
+            round_number: Current round number
+            pred_lat: Predicted latitude
+            pred_lng: Predicted longitude
+            model_name: Name/identifier for the model
+        
+        Returns:
+            True if result was logged successfully, False otherwise
+        """
+        if not result.success:
+            print(f"   ⚠️ Cannot log failed result: {result.error}")
+            return False
+        
+        if result.true_lat is None or result.true_lng is None:
+            print("   ⚠️ Cannot log result: missing true location")
+            return False
+        
+        try:
+            log_url = ml_api_url.replace('/predict', '/log_result')
+            payload = {
+                "round": round_number,
+                "pred_lat": pred_lat,
+                "pred_lng": pred_lng,
+                "true_lat": result.true_lat,
+                "true_lng": result.true_lng,
+                "distance_m": result.distance_meters or 0,
+                "score": result.score or 0,
+                "model": model_name,
+            }
+            
+            resp = requests.post(log_url, json=payload, timeout=5)
+            
+            if resp.ok:
+                data = resp.json()
+                distance_km = data.get('logged', {}).get('distance_km', 0)
+                true_cell_id = data.get('logged', {}).get('true_cell_id', 'N/A')
+                print(f"   📝 Logged to server: {distance_km:.1f}km, {result.score} pts (cell: {true_cell_id})")
+                return True
+            else:
+                print(f"   ⚠️ Failed to log result: {resp.status_code}")
+                return False
+                
+        except requests.exceptions.Timeout:
+            print("   ⚠️ Log result request timed out")
+            return False
+        except requests.exceptions.ConnectionError:
+            print("   ⚠️ Cannot connect to ML server for logging")
+            return False
+        except Exception as e:
+            print(f"   ⚠️ Error logging result: {e}")
+            return False
+    
     def trigger_browser_refresh(self, driver) -> bool:
         """
         Trigger UI refresh in browser after API submission.
