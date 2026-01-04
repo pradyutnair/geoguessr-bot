@@ -965,6 +965,7 @@ class GeoGuessrAPI:
         pred_lat: float,
         pred_lng: float,
         model_name: str = "unknown",
+        pano_id: Optional[str] = None,
     ) -> bool:
         """
         Log a game result to the ML server for analysis.
@@ -983,6 +984,7 @@ class GeoGuessrAPI:
             pred_lat: Predicted latitude
             pred_lng: Predicted longitude
             model_name: Name/identifier for the model
+            pano_id: Optional panorama ID for the round
         
         Returns:
             True if result was logged successfully, False otherwise
@@ -1006,6 +1008,7 @@ class GeoGuessrAPI:
                 "distance_m": result.distance_meters or 0,
                 "score": result.score or 0,
                 "model": model_name,
+                "pano_id": pano_id or "",
             }
             
             resp = requests.post(log_url, json=payload, timeout=5)

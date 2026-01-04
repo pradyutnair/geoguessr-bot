@@ -31,23 +31,52 @@ import threading
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple, Callable
+from typing import Optional, Dict, Any, List, Tuple, Callable, TYPE_CHECKING
 
 import requests
 from PIL import Image
 from streetview import get_panorama as sv_get_panorama
 
+if TYPE_CHECKING:
+    from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
+else:
+    ChromeWebDriver = Any
+
 # Try to import selenium - needed for panorama extraction
-try:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    SELENIUM_AVAILABLE = True
-except ImportError:
-    SELENIUM_AVAILABLE = False
-    print("⚠️ Selenium not available - panorama extraction will be limited")
+# Use lazy import to avoid conflicts with GUI frameworks
+SELENIUM_AVAILABLE = False
+_selenium_modules = {}
+
+def _import_selenium():
+    """Lazy import of selenium modules to avoid segfaults with GUI frameworks."""
+    global SELENIUM_AVAILABLE, _selenium_modules
+    if SELENIUM_AVAILABLE:
+        return _selenium_modules
+    
+    try:
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        
+        _selenium_modules = {
+            'webdriver': webdriver,
+            'Options': Options,
+            'By': By,
+            'WebDriverWait': WebDriverWait,
+            'EC': EC
+        }
+        SELENIUM_AVAILABLE = True
+        return _selenium_modules
+    except ImportError:
+        SELENIUM_AVAILABLE = False
+        return {}
+    except Exception as e:
+        # Catch any other errors (like segfaults from display conflicts)
+        print(f"⚠️ Selenium import failed: {e}")
+        SELENIUM_AVAILABLE = False
+        return {}
 
 from geoguessr_api import GeoGuessrAPI, GuessResult
 
@@ -254,7 +283,7 @@ class DuelsBot:
         # Components
         self.api = GeoGuessrAPI()
         self.panorama_downloader = PanoramaDownloader()
-        self.driver: Optional[webdriver.Chrome] = None
+        self.driver: Optional[ChromeWebDriver] = None
         
         # State
         self.current_game: Optional[DuelState] = None
@@ -267,6 +296,10 @@ class DuelsBot:
             self.api.load_cookies_from_file(cookies_file)
             self._log(f"✅ Loaded cookies from {cookies_file}")
     
+    def _get_selenium_modules(self):
+        """Get selenium modules, importing if needed."""
+        return _import_selenium()
+    
     def _log(self, message: str):
         """Log a message and optionally call status callback."""
         print(message)
@@ -278,11 +311,15 @@ class DuelsBot:
     
     def connect_to_chrome(self) -> bool:
         """Connect to Chrome browser with remote debugging."""
-        if not SELENIUM_AVAILABLE:
+        selenium_modules = _import_selenium()
+        if not SELENIUM_AVAILABLE or not selenium_modules:
             self._log("❌ Selenium not available")
             return False
         
         try:
+            Options = selenium_modules['Options']
+            webdriver = selenium_modules['webdriver']
+            
             options = Options()
             options.add_experimental_option("debuggerAddress", f"127.0.0.1:{self.chrome_port}")
             
@@ -409,6 +446,10 @@ class DuelsBot:
         
         # Method 2: Check for Google Maps iframe URL
         try:
+            selenium_modules = self._get_selenium_modules()
+            By = selenium_modules.get('By')
+            if not By:
+                return None
             iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
             for iframe in iframes:
                 src = iframe.get_attribute("src") or ""
@@ -715,6 +756,11 @@ class DuelsBot:
                 'button[class*="guess"]'
             ]
             
+            selenium_modules = self._get_selenium_modules()
+            By = selenium_modules.get('By')
+            if not By:
+                return False
+            
             for selector in selectors:
                 try:
                     btn = self.driver.find_element(By.CSS_SELECTOR, selector)
@@ -825,6 +871,11 @@ class DuelsBot:
                     '[class*="game_guess"]',
                     '[data-qa="perform-guess"]'
                 ]
+                selenium_modules = self._get_selenium_modules()
+                By = selenium_modules.get('By')
+                if not By:
+                    continue
+                    
                 for selector in selectors:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
                     if elements:
@@ -853,6 +904,11 @@ class DuelsBot:
                     '[class*="round-result"]',
                     '[class*="game-finished"]'
                 ]
+                selenium_modules = self._get_selenium_modules()
+                By = selenium_modules.get('By')
+                if not By:
+                    continue
+                    
                 for selector in result_selectors:
                     if self.driver.find_elements(By.CSS_SELECTOR, selector):
                         return True
@@ -1064,6 +1120,9 @@ class DuelsBot:
             self._log(f"   📏 Distance: {round_state.distance_meters:.0f} meters")
         if round_state.lat and round_state.lng:
             self._log(f"   📍 True location: ({round_state.lat:.4f}, {round_state.lng:.4f})")
+        if round_state.pano_id:
+            pano_display = round_state.pano_id[:30] + "..." if len(round_state.pano_id) > 30 else round_state.pano_id
+            self._log(f"   🗺️  Panorama ID: {pano_display}")
         
         # Invoke round complete callback
         if self.on_round_complete:

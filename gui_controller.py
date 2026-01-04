@@ -434,7 +434,7 @@ class GeoBotGUI:
             with open(self.results_file, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['round', 'predicted_lat', 'predicted_lng', 'true_lat', 'true_lng', 
-                               'distance_km', 'score', 'damage', 'timestamp', 'game_url'])
+                               'distance_km', 'score', 'damage', 'timestamp', 'game_url', 'pano_id'])
         
         # Append result (game_url saved in CSV but not displayed in GUI)
         with open(self.results_file, 'a', newline='') as f:
@@ -449,7 +449,8 @@ class GeoBotGUI:
                 round_state.score,
                 getattr(round_state, 'damage', None),
                 round_state.timestamp,
-                self.current_game_url or ""
+                self.current_game_url or "",
+                getattr(round_state, 'pano_id', None) or ""
             ])
     
     def test_api_connection(self):

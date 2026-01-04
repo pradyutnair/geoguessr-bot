@@ -129,7 +129,7 @@ prediction_count = 0
 session_start_time = None
 
 # CSV header for session results
-SESSION_CSV_HEADER = "round,timestamp,model,pred_lat,pred_lng,true_lat,true_lng,distance_km,score,cell_id,cell_confidence\n"
+SESSION_CSV_HEADER = "round,timestamp,model,pred_lat,pred_lng,true_lat,true_lng,distance_km,score,cell_id,cell_confidence,pano_id\n"
 
 
 def init_logging_session():
@@ -1083,7 +1083,8 @@ def log_result():
         "score": 4832,
         "model": "stage2_v1",  # optional, defaults to checkpoint name
         "cell_id": 123,  # optional
-        "cell_confidence": 0.85  # optional
+        "cell_confidence": 0.85,  # optional
+        "pano_id": "abc123..."  # optional, panorama ID for the round
     }
     """
     global session_csv_path, log_dir
@@ -1112,6 +1113,7 @@ def log_result():
     model_name = data.get('model', 'unknown')
     cell_id = data.get('cell_id', '')
     cell_confidence = data.get('cell_confidence', '')
+    pano_id = data.get('pano_id', '')
     
     timestamp = datetime.now().strftime("%H:%M:%S")
     
@@ -1119,13 +1121,14 @@ def log_result():
     try:
         with open(session_csv_path, 'a') as f:
             f.write(f"{round_num},{timestamp},{model_name},{pred_lat:.6f},{pred_lng:.6f},"
-                    f"{true_lat:.6f},{true_lng:.6f},{distance_km:.3f},{score},{cell_id},{cell_confidence}\n")
+                    f"{true_lat:.6f},{true_lng:.6f},{distance_km:.3f},{score},{cell_id},{cell_confidence},{pano_id}\n")
     except Exception as e:
         logger.error(f"Failed to write to CSV: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
+    pano_id_display = pano_id[:20] + "..." if pano_id and len(pano_id) > 20 else (pano_id or "N/A")
     logger.info(f"📝 Logged result: Round {round_num} | {model_name} | "
-                f"Distance: {distance_km:.1f}km | Score: {score}")
+                f"Distance: {distance_km:.1f}km | Score: {score} | Pano ID: {pano_id_display}")
     
     # Optionally create error map visualization (in background)
     save_map = data.get('save_map', True)
