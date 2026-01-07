@@ -12,6 +12,6 @@
 \contentsline {subsection}{\numberline {4.2}Stage 1: Concept Classification Results}{7}{subsection.4.2}%
 \contentsline {subsection}{\numberline {4.3}Stage 2: Geolocation Results}{7}{subsection.4.3}%
 \contentsline {subsection}{\numberline {4.4}Out-of-Distribution Evaluation}{8}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}Human vs Baseline Comparison}{8}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.5}Human vs Baseline Comparison}{9}{subsection.4.5}%
 \contentsline {section}{\numberline {5}Discussion}{10}{section.5}%
 \contentsline {section}{\numberline {6}Conclusion}{10}{section.6}%

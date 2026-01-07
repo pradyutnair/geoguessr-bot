@@ -337,29 +337,31 @@ GeoCLIP & -- & 1015.8 & 3190.6 & -- & 0.027 & 0.160 & 0.424 \\
 \label{tab:stage2_hf}
 \end{table}
 
-Out-of-distribution performance reveals the generalization capabilities of our approach. Median error increases substantially compared to in-distribution results, reflecting the expected distribution shift between training and GeoGuessr imagery. Despite this challenge, the finetuned variant maintains superior performance across all evaluation metrics, with the best configuration achieving 349.9 km median error compared to 391.5 km for vanilla.
-
-Comparing variants within each ablation mode confirms the consistent benefit of Stage 0 pretraining. The finetuned model achieves lower median error than vanilla for all three modes, with improvements ranging from approximately 9 to 14\% depending on the configuration. This uniform advantage validates that Stage 0 pretraining provides broadly transferable representations regardless of inference configuration.
-
-Even with the distribution shift, country-level accuracy remains above 63\% across all configurations, indicating robust coarse localization. The baseline GeoCLIP model achieves significantly higher median error (1015.8 km) and lower threshold accuracies across all scales, demonstrating the advantage of our concept-aware approach even for out-of-distribution data.
-Figure~\ref{fig:stage2_results} visualizes performance across ablation modes and evaluation settings.
-
 \begin{figure}[h!]
     \centering
-    \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{analysis/stage2_test_split_results.png}
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{analysis/stage2_test_split_results.png}
         \caption{In-distribution test split performance}
         \label{fig:stage2_test}
     \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{analysis/stage2_hf_results.png}
+    \hspace{0.04\linewidth}
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{analysis/stage2_hf_results.png}
         \caption{Out-of-distribution GeoGuessr performance}
         \label{fig:stage2_hf}
     \end{subfigure}
     \caption{Stage 2 geolocation results comparing model variants and ablation modes. The finetuned variant excels on both in-distribution and out-of-distribution data, demonstrating the value of Stage 0 pretraining for generalization.}
     \label{fig:stage2_results}
 \end{figure}
+
+Out-of-distribution performance reveals the generalization capabilities of our approach. Median error increases substantially compared to in-distribution results, reflecting the expected distribution shift between training and GeoGuessr imagery. Despite this challenge, the finetuned variant maintains superior performance across all evaluation metrics, with the best configuration achieving 349.9 km median error compared to 391.5 km for vanilla.
+
+Comparing variants within each ablation mode confirms the consistent benefit of Stage 0 pretraining. The finetuned model achieves lower median error than vanilla for all three modes, with improvements ranging from approximately 9 to 14\% depending on the configuration. This uniform advantage validates that Stage 0 pretraining provides broadly transferable representations regardless of inference configuration.
+
+Even with the distribution shift, country-level accuracy remains above 63\% across all configurations, indicating robust coarse localization. The baseline GeoCLIP model achieves significantly higher median error (1015.8 km) and lower threshold accuracies across all scales, demonstrating the advantage of our concept-aware approach even for out-of-distribution data.
+Figure~\ref{fig:stage2_results} visualizes performance across ablation modes and evaluation settings.
 
 % \subsection{Ablation Analysis}
 
