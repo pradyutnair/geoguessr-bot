@@ -113,11 +113,11 @@ The dataset exhibits a hierarchical concept structure with approximately 100 chi
 
 Data is split into training (70\%), validation (15\%), and test (15\%) sets using stratified sampling by child concept to ensure all concepts appear in training. The same splits are used across all training stages for fair comparison.
 
-\subsection{Semantic Geocell Generation}
+\subsection{Geocell Generation}
 
 Traditional approaches partition the Earth's surface uniformly, but this fails to account for non-uniform data distribution. Urban areas contain far more street view imagery than remote regions. We address this through adaptive per-country clustering that allocates geocells according to regional data density.
 
-For each country with sufficient samples, we convert GPS coordinates to 3D Cartesian positions on the unit sphere and apply K-means clustering with $k = \lceil n / s \rceil$ clusters, where $n$ is the sample count and $s = 500$ is the minimum samples per cell. Countries with fewer samples receive a single cell at their centroid. This process produces 1,048 semantic geocells globally, with dense regions (Europe, North America, East Asia) receiving finer granularity than sparse regions.
+For each country with sufficient samples, we convert GPS coordinates to 3D Cartesian positions on the unit sphere and apply K-means clustering with $k = \lceil n / s \rceil$ clusters, where $n$ is the sample count and $s = 500$ is the minimum samples per cell. Countries with fewer samples receive a single cell at their centroid. This process produces 1,048 geocells globally, with dense regions (Europe, North America, East Asia) receiving finer granularity than sparse regions.
 
 Figure~\ref{fig:geocells} visualizes the resulting tessellation, showing how cell density adapts to data availability. The Voronoi diagram illustrates coverage, while the latitude distribution confirms concentration in populated northern hemisphere regions.
 
@@ -125,7 +125,7 @@ Figure~\ref{fig:geocells} visualizes the resulting tessellation, showing how cel
     \centering
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{geocells_map/geocells_map_finetuned_both.png}
-        \caption{Voronoi tessellation of semantic geocells showing cell centers (red markers) and their boundaries. Cell density adapts to regional data availability.}
+        \caption{Voronoi tessellation of geocells showing cell centers (red markers) and their boundaries. Cell density adapts to regional data availability.}
         \label{fig:geocells_map}
     \end{subfigure}
     \hfill
@@ -134,7 +134,7 @@ Figure~\ref{fig:geocells} visualizes the resulting tessellation, showing how cel
         \caption{Distribution of geocells by latitude (left) and hemisphere (right), showing concentration in northern populated regions.}
         \label{fig:geocells_dist}
     \end{subfigure}
-    \caption{Adaptive semantic geocell generation through per-country K-means clustering in 3D Cartesian space. The 1,048 geocells provide finer granularity in data-dense regions while maintaining global coverage.}
+    \caption{Adaptive geocell generation through per-country K-means clustering in 3D Cartesian space. The 1,048 geocells provide finer granularity in data-dense regions while maintaining global coverage.}
     \label{fig:geocells}
 \end{figure}
 

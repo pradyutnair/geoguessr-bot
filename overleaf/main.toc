@@ -3,7 +3,7 @@
 \contentsline {section}{\numberline {2}Related Work}{2}{section.2}%
 \contentsline {section}{\numberline {3}Methodology}{3}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Dataset and Preprocessing}{3}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Semantic Geocell Generation}{4}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.2}Geocell Generation}{4}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}Stage 0: Domain Contrastive Pretraining}{4}{subsection.3.3}%
 \contentsline {subsection}{\numberline {3.4}Stage 1: Text-Prototype Concept Learning}{5}{subsection.3.4}%
 \contentsline {subsection}{\numberline {3.5}Stage 2: Cross-Attention Geolocation}{6}{subsection.3.5}%
