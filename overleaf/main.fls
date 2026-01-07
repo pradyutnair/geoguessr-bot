@@ -1338,11 +1338,6 @@ INPUT ./analysis/stage2_hf_results.png
 INPUT analysis/stage2_hf_results.png
 INPUT ./analysis/stage2_hf_results.png
 INPUT ./analysis/stage2_hf_results.png
-INPUT ./analysis/stage2_finetuned_radar.png
-INPUT ./analysis/stage2_finetuned_radar.png
-INPUT analysis/stage2_finetuned_radar.png
-INPUT ./analysis/stage2_finetuned_radar.png
-INPUT ./analysis/stage2_finetuned_radar.png
 INPUT ./logo/logoUvA_en.pdf
 INPUT logo/logoUvA_en.pdf
 INPUT ./logo/logoUvA_en.pdf
