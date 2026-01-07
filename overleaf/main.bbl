@@ -19,6 +19,65 @@
 
 \refsection{0}
   \datalist[entry]{nyt/global//global/global}
+    \entry{geoguessr}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=e249b5c5bc615c5b0a7b874f89e88250}{%
+           family={AB},
+           familyi={A\bibinitperiod},
+           given={GeoGuessr},
+           giveni={G\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{e249b5c5bc615c5b0a7b874f89e88250}
+      \strng{fullhash}{e249b5c5bc615c5b0a7b874f89e88250}
+      \strng{bibnamehash}{e249b5c5bc615c5b0a7b874f89e88250}
+      \strng{authorbibnamehash}{e249b5c5bc615c5b0a7b874f89e88250}
+      \strng{authornamehash}{e249b5c5bc615c5b0a7b874f89e88250}
+      \strng{authorfullhash}{e249b5c5bc615c5b0a7b874f89e88250}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://www.geoguessr.com}}
+      \field{note}{Accessed: 2025-01-07}
+      \field{title}{GeoGuessr - A Geography Discovery Game}
+      \field{year}{2013}
+    \endentry
+    \entry{astruc2024omniloc}{article}{}
+      \true{moreauthor}
+      \true{morelabelname}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=0c3fa225c9964088e56a67fbb87de2b3}{%
+           family={Astruc},
+           familyi={A\bibinitperiod},
+           given={Louis},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=49936a63f6519c5aed88b664990355d2}{%
+           family={Guerin},
+           familyi={G\bibinitperiod},
+           given={Jean-Baptiste},
+           giveni={J\bibinithyphendelim B\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{5db0df7ccf20282e322a253e01af9b20}
+      \strng{fullhash}{5db0df7ccf20282e322a253e01af9b20}
+      \strng{bibnamehash}{5db0df7ccf20282e322a253e01af9b20}
+      \strng{authorbibnamehash}{5db0df7ccf20282e322a253e01af9b20}
+      \strng{authornamehash}{5db0df7ccf20282e322a253e01af9b20}
+      \strng{authorfullhash}{5db0df7ccf20282e322a253e01af9b20}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:2508.00000}
+      \field{title}{OmniLoc: Towards Leveraging Multiple Perspectives for Image Geolocalization}
+      \field{year}{2024}
+    \endentry
     \entry{ba2016layer}{article}{}
       \name{author}{3}{}{%
         {{un=0,uniquepart=base,hash=750bb29ebaf655e36626e464041edb6d}{%
@@ -100,6 +159,84 @@
       \field{year}{2009}
       \field{pages}{41\bibrangedash 48}
       \range{pages}{8}
+    \endentry
+    \entry{biljecki2021street}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=1fd5624cf140576d8190e859c4f4a325}{%
+           family={Biljecki},
+           familyi={B\bibinitperiod},
+           given={Filip},
+           giveni={F\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{1fd5624cf140576d8190e859c4f4a325}
+      \strng{fullhash}{1fd5624cf140576d8190e859c4f4a325}
+      \strng{bibnamehash}{1fd5624cf140576d8190e859c4f4a325}
+      \strng{authorbibnamehash}{1fd5624cf140576d8190e859c4f4a325}
+      \strng{authornamehash}{1fd5624cf140576d8190e859c4f4a325}
+      \strng{authorfullhash}{1fd5624cf140576d8190e859c4f4a325}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{ISPRS International Journal of Geo-Information}
+      \field{number}{10}
+      \field{title}{Street View Imagery in Urban Analytics and GIS: A Review}
+      \field{volume}{10}
+      \field{year}{2021}
+      \field{pages}{681}
+      \range{pages}{1}
+    \endentry
+    \entry{chauhan2023interactive}{inproceedings}{}
+      \name{author}{5}{}{%
+        {{un=0,uniquepart=base,hash=4d347eb4f1bfbe1b973b2973a134bbef}{%
+           family={Chauhan},
+           familyi={C\bibinitperiod},
+           given={Divi},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=97badcf9b9654c07799fae6d1c37d330}{%
+           family={Kalluri},
+           familyi={K\bibinitperiod},
+           given={Kaushik},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=dbc9ff54e664325f8042adc1e3a259a9}{%
+           family={Saha},
+           familyi={S\bibinitperiod},
+           given={Soumyadeep},
+           giveni={S\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=de391703fb0c2fdf733b3a0095bc32ce}{%
+           family={Barzilay},
+           familyi={B\bibinitperiod},
+           given={Regina},
+           giveni={R\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=521085652a07e67bdff5323e2febc138}{%
+           family={Jaakkola},
+           familyi={J\bibinitperiod},
+           given={Tommi},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{f1816c63c8dfd2d0054f7056a79cd1e8}
+      \strng{fullhash}{7f462de4c982e3e45b3d26cbca61cf2b}
+      \strng{bibnamehash}{f1816c63c8dfd2d0054f7056a79cd1e8}
+      \strng{authorbibnamehash}{f1816c63c8dfd2d0054f7056a79cd1e8}
+      \strng{authornamehash}{f1816c63c8dfd2d0054f7056a79cd1e8}
+      \strng{authorfullhash}{7f462de4c982e3e45b3d26cbca61cf2b}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{International Conference on Machine Learning (ICML)}
+      \field{title}{Interactive Concept Bottleneck Models}
+      \field{year}{2023}
     \endentry
     \entry{streetclip2023}{article}{}
       \name{author}{3}{}{%
@@ -221,6 +358,32 @@
       \field{pages}{1\bibrangedash 8}
       \range{pages}{8}
     \endentry
+    \entry{s2geometry}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=a24f3d27740e9bfc1f8f7d628643f81d}{%
+           family={Inc.},
+           familyi={I\bibinitperiod},
+           given={Google},
+           giveni={G\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{a24f3d27740e9bfc1f8f7d628643f81d}
+      \strng{fullhash}{a24f3d27740e9bfc1f8f7d628643f81d}
+      \strng{bibnamehash}{a24f3d27740e9bfc1f8f7d628643f81d}
+      \strng{authorbibnamehash}{a24f3d27740e9bfc1f8f7d628643f81d}
+      \strng{authornamehash}{a24f3d27740e9bfc1f8f7d628643f81d}
+      \strng{authorfullhash}{a24f3d27740e9bfc1f8f7d628643f81d}
+      \field{sortinit}{I}
+      \field{sortinithash}{8d291c51ee89b6cd86bf5379f0b151d8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://s2geometry.io}}
+      \field{note}{Open Source Library}
+      \field{title}{S2 Geometry Library}
+      \field{year}{2021}
+    \endentry
     \entry{koh2020concept}{inproceedings}{}
       \name{author}{7}{}{%
         {{un=0,uniquepart=base,hash=b7309d5979903f9e56ec43ebf0d594ad}{%
@@ -286,6 +449,78 @@
       \field{year}{2020}
       \field{pages}{5338\bibrangedash 5348}
       \range{pages}{11}
+    \endentry
+    \entry{learnablemeta}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=9954d269e1e081a4d676d7aa8cfa05e3}{%
+           family={LearnableMeta},
+           familyi={L\bibinitperiod}}}%
+      }
+      \strng{namehash}{9954d269e1e081a4d676d7aa8cfa05e3}
+      \strng{fullhash}{9954d269e1e081a4d676d7aa8cfa05e3}
+      \strng{bibnamehash}{9954d269e1e081a4d676d7aa8cfa05e3}
+      \strng{authorbibnamehash}{9954d269e1e081a4d676d7aa8cfa05e3}
+      \strng{authornamehash}{9954d269e1e081a4d676d7aa8cfa05e3}
+      \strng{authorfullhash}{9954d269e1e081a4d676d7aa8cfa05e3}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://learnablemeta.com}}
+      \field{note}{Accessed: 2025-01-07}
+      \field{title}{LearnableMeta - Challenging GeoGuessr Locations}
+      \field{year}{2023}
+    \endentry
+    \entry{li2020visual}{article}{}
+      \name{author}{5}{}{%
+        {{un=2,uniquepart=given,hash=f3dda8d50441d77fefd286fc97d4fba1}{%
+           family={Li},
+           familyi={L\bibinitperiod},
+           given={Yiqi},
+           giveni={Y\bibinitperiod},
+           givenun=2}}%
+        {{un=0,uniquepart=base,hash=a442658eb75ebe4d9d10264263190850}{%
+           family={Zhang},
+           familyi={Z\bibinitperiod},
+           given={Yulun},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=7ff1d21e3184f525b582b31f2ce6651b}{%
+           family={Huang},
+           familyi={H\bibinitperiod},
+           given={Xin},
+           giveni={X\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=bbea472df7c667be1b2f3c450397499d}{%
+           family={Ding},
+           familyi={D\bibinitperiod},
+           given={Jiaying},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=6f410a596e335c299e3550a4e9990bb4}{%
+           family={Zhang},
+           familyi={Z\bibinitperiod},
+           given={Hanwang},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{6a4dcff9c4106645dd7f8230b36d1397}
+      \strng{fullhash}{c62356df503deaa0d701d8720dc3fa95}
+      \strng{bibnamehash}{6a4dcff9c4106645dd7f8230b36d1397}
+      \strng{authorbibnamehash}{6a4dcff9c4106645dd7f8230b36d1397}
+      \strng{authornamehash}{6a4dcff9c4106645dd7f8230b36d1397}
+      \strng{authorfullhash}{c62356df503deaa0d701d8720dc3fa95}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:2407.14910}
+      \field{title}{Visual Geo-Localization from Images}
+      \field{year}{2024}
     \endentry
     \entry{lin2017focal}{inproceedings}{}
       \name{author}{5}{}{%
@@ -425,12 +660,12 @@
            prefix={van\bibnamedelima den},
            prefixi={v\bibinitperiod\bibinitdelim d\bibinitperiod},
            prefixun=0}}%
-        {{un=0,uniquepart=base,hash=ea8af3b8f68d4c40172af64bc26a53c6}{%
+        {{un=2,uniquepart=given,hash=ea8af3b8f68d4c40172af64bc26a53c6}{%
            family={Li},
            familyi={L\bibinitperiod},
            given={Yazhe},
            giveni={Y\bibinitperiod},
-           givenun=0}}%
+           givenun=2}}%
         {{un=0,uniquepart=base,hash=494b568c5dc85ba8f3f409635f9c5f25}{%
            family={Vinyals},
            familyi={V\bibinitperiod},
@@ -583,6 +818,76 @@
       \field{title}{CPlaNet: Enhancing Image Geolocalization by Combinatorial Partitioning of Maps}
       \field{year}{2018}
     \endentry
+    \entry{toker2021satellite_cvpr}{inproceedings}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=87217d3f1db8f3e416312be248998a8b}{%
+           family={Toker},
+           familyi={T\bibinitperiod},
+           given={Asli},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=9a85d4ca9990da7199352928654a0439}{%
+           family={Kira},
+           familyi={K\bibinitperiod},
+           given={Zsolt},
+           giveni={Z\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=7187819964d2d08695068a3f668e2ed1}{%
+           family={Lepetit},
+           familyi={L\bibinitperiod},
+           given={Vincent},
+           giveni={V\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{fc98b10553c8fc8ca4a4676b7fe4b10f}
+      \strng{fullhash}{fc98b10553c8fc8ca4a4676b7fe4b10f}
+      \strng{bibnamehash}{fc98b10553c8fc8ca4a4676b7fe4b10f}
+      \strng{authorbibnamehash}{fc98b10553c8fc8ca4a4676b7fe4b10f}
+      \strng{authornamehash}{fc98b10553c8fc8ca4a4676b7fe4b10f}
+      \strng{authorfullhash}{fc98b10553c8fc8ca4a4676b7fe4b10f}
+      \field{sortinit}{T}
+      \field{sortinithash}{9af77f0292593c26bde9a56e688eaee9}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}
+      \field{title}{Coming Down to Earth: Satellite-to-Street View Synthesis for Geo-Localization}
+      \field{year}{2021}
+      \field{pages}{12517\bibrangedash 12527}
+      \range{pages}{11}
+    \endentry
+    \entry{vandenhirtz2024stochastic}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=be52ca58c30ccbb7da1d07bbff010df1}{%
+           family={Vandenhirtz},
+           familyi={V\bibinitperiod},
+           given={Julian},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c0ab52e226557a243a4a5277aec8acdc}{%
+           family={Bizer},
+           familyi={B\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{b9ae4ffe150b3bfd53c2977fea071635}
+      \strng{fullhash}{b9ae4ffe150b3bfd53c2977fea071635}
+      \strng{bibnamehash}{b9ae4ffe150b3bfd53c2977fea071635}
+      \strng{authorbibnamehash}{b9ae4ffe150b3bfd53c2977fea071635}
+      \strng{authornamehash}{b9ae4ffe150b3bfd53c2977fea071635}
+      \strng{authorfullhash}{b9ae4ffe150b3bfd53c2977fea071635}
+      \field{sortinit}{V}
+      \field{sortinithash}{afb52128e5b4dc4b843768c0113d673b}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:2406.19272}
+      \field{title}{Stochastic Concept Bottleneck Models}
+      \field{year}{2024}
+    \endentry
     \entry{vaswani2017attention}{inproceedings}{}
       \name{author}{8}{}{%
         {{un=0,uniquepart=base,hash=7f28e84700536646dd6620a0db07ad09}{%
@@ -689,6 +994,43 @@
       \field{volume}{36}
       \field{year}{2023}
     \endentry
+    \entry{wang2025street}{inproceedings}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=5a84f721422172d9fb3140daa2cdd2c2}{%
+           family={Wang},
+           familyi={W\bibinitperiod},
+           given={Xiaohui},
+           giveni={X\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=a19622e1a6ff90e882e6926a3db87844}{%
+           family={Zhang},
+           familyi={Z\bibinitperiod},
+           given={Yuting},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=621013bf54d3546375ad71f17f020b5b}{%
+           family={Liu},
+           familyi={L\bibinitperiod},
+           given={Yang},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{f4c74e3524c9c3e21377d3c7b4c30c50}
+      \strng{fullhash}{f4c74e3524c9c3e21377d3c7b4c30c50}
+      \strng{bibnamehash}{f4c74e3524c9c3e21377d3c7b4c30c50}
+      \strng{authorbibnamehash}{f4c74e3524c9c3e21377d3c7b4c30c50}
+      \strng{authornamehash}{f4c74e3524c9c3e21377d3c7b4c30c50}
+      \strng{authorfullhash}{f4c74e3524c9c3e21377d3c7b4c30c50}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{International Conference on Geoinformatics}
+      \field{title}{Assessing Google Street View Data Quality and Availability}
+      \field{year}{2025}
+    \endentry
     \entry{weyand2016planet}{inproceedings}{}
       \name{author}{3}{}{%
         {{un=0,uniquepart=base,hash=7dcb9c6d4d4251a7e32b502d03c9354b}{%
@@ -730,6 +1072,55 @@
       \field{year}{2016}
       \field{pages}{37\bibrangedash 55}
       \range{pages}{19}
+    \endentry
+    \entry{yuksekgonul2022posthoc}{article}{}
+      \name{author}{5}{}{%
+        {{un=0,uniquepart=base,hash=2ed9ab30c5aa7748b9b2311811c14249}{%
+           family={Yuksekgonul},
+           familyi={Y\bibinitperiod},
+           given={Cem},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c7425b05d0e396d01a08d6e3aad366b0}{%
+           family={Bottman},
+           familyi={B\bibinitperiod},
+           given={Marten},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=2f100a4fbc0bb09e5c0e70e9a4af36a9}{%
+           family={Wang},
+           familyi={W\bibinitperiod},
+           given={Haotian},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=85023b57d16b4e5275143bec7654c3c6}{%
+           family={Wu},
+           familyi={W\bibinitperiod},
+           given={Yuhui},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=1b868d50048a635fa27ffa744323fa41}{%
+           family={Zou},
+           familyi={Z\bibinitperiod},
+           given={James},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{3511a51931ab736e1be229e455217e49}
+      \strng{fullhash}{573ca80cbd19810266d4088bbc667f42}
+      \strng{bibnamehash}{3511a51931ab736e1be229e455217e49}
+      \strng{authorbibnamehash}{3511a51931ab736e1be229e455217e49}
+      \strng{authornamehash}{3511a51931ab736e1be229e455217e49}
+      \strng{authorfullhash}{573ca80cbd19810266d4088bbc667f42}
+      \field{sortinit}{Y}
+      \field{sortinithash}{fd67ad5a9ef0f7456bdd9aab10fe1495}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:2205.15480}
+      \field{title}{Post-hoc Concept Bottleneck Models}
+      \field{year}{2022}
     \endentry
   \enddatalist
 \endrefsection
