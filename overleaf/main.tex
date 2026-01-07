@@ -261,7 +261,6 @@ Table~\ref{tab:stage1} presents concept classification results on the held-out t
 
 \begin{table}[h!]
 \centering
-\label{tab:stage1}
 \begin{tabularx}{\columnwidth}{l*{4}{>{\centering\arraybackslash}X}}
 \toprule
 \textbf{Variant} & \textbf{Child (Top-1)} & \textbf{Parent (Top-1)} & \textbf{Child (Top-5)} & \textbf{Parent (Top-5)} \\
@@ -271,6 +270,7 @@ Finetuned & \textbf{0.461} & \textbf{0.480} & \textbf{0.716} & \textbf{0.725} \\
 \bottomrule
 \end{tabularx}
 \caption{Stage 1 concept classification accuracy on the test split. The finetuned variant with Stage 0 pretraining shows improved parent concept accuracy, indicating better hierarchical structure learning.}
+\label{tab:stage1}
 \end{table}
 
 Both variants achieve comparable child concept accuracy around 46\%, reflecting the challenge of distinguishing among approximately 100 fine-grained categories. The finetuned variant shows notably improved parent concept accuracy (48.0\% vs 38.6\%), suggesting that Stage 0 pretraining helps learn the hierarchical concept structure. Top-5 accuracies exceed 70\% for both levels, indicating that the correct concept typically ranks highly even when not the top prediction.
@@ -284,7 +284,6 @@ Table~\ref{tab:stage2_test} presents geolocation results on the test split, comp
 \begin{table}[h!]
 \centering
 \small
-\label{tab:stage2_test}
 \begin{tabularx}{\columnwidth}{l>{\raggedright\arraybackslash}X*{6}{>{\centering\arraybackslash}X}}
 \toprule
 \textbf{Variant} & \textbf{Mode} & \textbf{Median (km)} & \textbf{Mean (km)} & \textbf{Cell Acc} & \textbf{City} & \textbf{Region} & \textbf{Country} \\
@@ -301,15 +300,14 @@ Table~\ref{tab:stage2_test} presents geolocation results on the test split, comp
 \bottomrule
 \end{tabularx}
 \caption{Stage 2 geolocation performance on the in-distribution test split. The finetuned variant with full cross-attention (``both'') achieves the best median error of 126 km.}
+\label{tab:stage2_test}
 \end{table}
 
-Several observations emerge from these results. First, the finetuned variant consistently outperforms vanilla, with the ``both'' configuration achieving 126 km median error compared to 133 km for vanilla, a 5\% improvement from Stage 0 pretraining.
+The results reveal several key patterns. Across all ablation modes, the finetuned variant consistently outperforms vanilla, with the best configuration achieving 126 km median error compared to 133 km for vanilla. This uniform advantage demonstrates that Stage 0 pretraining provides broadly beneficial representations regardless of inference configuration.
 
-Second, the ablation analysis reveals that concept-only predictions approach full model performance (137 km vs 126 km for finetuned), demonstrating that the concept bottleneck captures substantial geographic information. This validates our interpretability goal: predictions can be understood through concept activations without significant accuracy sacrifice.
+Within each variant, comparing different modes shows that concept-only predictions closely approach full model performance. For finetuned, concept-only achieves 137.0 km versus 126.0 km for the full model, validating our core interpretability goal that predictions can be understood through concept activations without significant accuracy sacrifice. In contrast, image-only mode performs notably worse (154.0 km for finetuned, 222.0 km for vanilla), indicating that the concept bottleneck provides regularization benefits beyond interpretability by preventing overfitting to low-level visual patterns.
 
-Third, image-only predictions perform notably worse (154-222 km), indicating that the concept bottleneck provides regularization benefits beyond interpretability. The explicit semantic structure prevents the model from overfitting to low-level visual patterns.
-
-Fourth, country-level accuracy exceeds 80\% across all configurations, showing reliable coarse localization even when fine-grained prediction is uncertain.
+Despite variation in fine-grained accuracy, country-level accuracy exceeds 80\% across all configurations, showing that the models maintain reliable coarse localization even when precise predictions are uncertain.
 
 
 \subsection{Out-of-Distribution Evaluation}
@@ -339,10 +337,11 @@ GeoCLIP & -- & 1015.8 & 3190.6 & -- & 0.027 & 0.160 & 0.424 \\
 \label{tab:stage2_hf}
 \end{table}
 
-Out-of-distribution performance shows interesting patterns. The finetuned variant outperforms vanilla on this dataset, with the finetuned ``both'' mode achieving the best median error (349.9 km) and highest country-level accuracy (68.8\%). This demonstrates that Stage 0 pretraining provides transferable representations that generalize to out-of-distribution data.
+Out-of-distribution performance reveals the generalization capabilities of our approach. Median error increases substantially compared to in-distribution results, reflecting the expected distribution shift between training and GeoGuessr imagery. Despite this challenge, the finetuned variant maintains superior performance across all evaluation metrics, with the best configuration achieving 349.9 km median error compared to 391.5 km for vanilla.
 
-Comparing variants within each ablation mode, the finetuned model consistently outperforms vanilla across all modes: for the ``both'' mode (349.9 km vs 391.5 km, a 10.6\% improvement), concept-only (381.8 km vs 417.6 km, 8.6\% improvement), and image-only (387.0 km vs 448.4 km, 13.7\% improvement). This consistent advantage across all modes validates that Stage 0 pretraining provides broadly transferable representations regardless of the inference configuration. Country-level accuracy remains above 63\% across all configurations despite the distribution shift, indicating robust coarse localization. The baseline GeoCLIP model achieves significantly higher median error (1015.8 km) and lower threshold accuracies across all scales, demonstrating the advantage of our concept-aware approach.
+Comparing variants within each ablation mode confirms the consistent benefit of Stage 0 pretraining. The finetuned model achieves lower median error than vanilla for all three modes, with improvements ranging from approximately 9 to 14\% depending on the configuration. This uniform advantage validates that Stage 0 pretraining provides broadly transferable representations regardless of inference configuration.
 
+Even with the distribution shift, country-level accuracy remains above 63\% across all configurations, indicating robust coarse localization. The baseline GeoCLIP model achieves significantly higher median error (1015.8 km) and lower threshold accuracies across all scales, demonstrating the advantage of our concept-aware approach even for out-of-distribution data.
 Figure~\ref{fig:stage2_results} visualizes performance across ablation modes and evaluation settings.
 
 \begin{figure}[h!]
@@ -383,7 +382,6 @@ Table~\ref{tab:human_comparison} presents aggregated results across all rounds. 
 
 \begin{table}[h!]
 \centering
-\label{tab:human_comparison}
 \begin{tabularx}{\columnwidth}{l*{4}{>{\centering\arraybackslash}X}}
 \toprule
 \textbf{Method} & \textbf{Median Distance (km)} & \textbf{Mean Distance (km)} & \textbf{Median Score} & \textbf{Mean Score} \\
@@ -394,6 +392,7 @@ Human & 849.0 & 2643.0 & 2830 & 2665 \\
 \bottomrule
 \end{tabularx}
 \caption{GeoGuessr game comparison: main model vs baseline (GeoCLIP) vs human performance on 30 rounds.}
+\label{tab:human_comparison}
 \end{table}
 
 GeoGuessr scoring provides complementary insights: the baseline achieves the highest median score (4098), followed by human (2830) and our main model (3408). The mean scores follow a similar ordering: baseline (3413), human (2665), and main model (2929). These results indicate that while our concept-aware approach provides interpretability benefits, it currently lags behind the baseline in raw geolocation accuracy on this interactive task.
@@ -409,15 +408,15 @@ Despite the accuracy gap, our model's concept bottleneck provides interpretabili
 \section{Discussion}
 \label{sec:discussion}
 
-A central question in concept bottleneck design is whether enforcing interpretability compromises prediction accuracy. Our results suggest the trade-off is minimal: concept-only predictions achieve within 10\% of full model performance (137 km vs 126 km median error on test data). This indicates that the 512-dimensional concept embedding captures sufficient geographic information for competitive geolocation, while providing the substantial benefit of human-interpretable intermediate representations.
+A central question in concept bottleneck design is whether enforcing interpretability compromises prediction accuracy. Our results suggest the trade-off is minimal, with concept-only predictions achieving within 10\% of full model performance. This indicates that the 512-dimensional concept embedding captures sufficient geographic information for competitive geolocation, while providing human-interpretable intermediate representations.
 
-Stage 0 contrastive pretraining provides clear benefits on both in-distribution and out-of-distribution data, reducing median error from 133 km to 126 km on test data and from 391.5 km to 349.9 km on the GeoGuessr dataset. This demonstrates that the contrastive pretraining learns broadly transferable representations that generalize effectively to out-of-distribution imagery. The consistent improvement across both evaluation settings validates the value of domain-specific pretraining for geolocation tasks.
+Complementing the concept bottleneck effectiveness, Stage 0 contrastive pretraining provides clear benefits on both in-distribution and out-of-distribution data. The finetuned variant reduces median error from 133 km to 126 km on test data and from 392 km to 350 km on the GeoGuessr dataset. This consistent improvement across evaluation settings demonstrates that contrastive pretraining learns broadly transferable representations, validating the value of domain-specific pretraining for geolocation tasks.
 
-The hierarchical organization of child and parent concepts proves valuable for learning structured representations. The finetuned variant shows substantially improved parent concept accuracy (48.0\% vs 38.6\%), indicating that the contrastive pretraining helps establish correct semantic relationships. The consistency losses ensure that child predictions aggregate correctly to parent levels, providing multiple granularities of interpretable output.
+The hierarchical organization of concepts further enhances representation learning. The finetuned variant shows substantially improved parent concept accuracy (48.0\% vs 38.6\% for vanilla), indicating that contrastive pretraining helps establish correct semantic relationships between fine-grained child concepts and coarse parent categories. Consistency losses ensure that child predictions aggregate correctly to parent levels, providing multiple granularities of interpretable output that align with human semantic intuition.
 
-The per-country clustering approach for geocell generation effectively allocates prediction granularity according to data density. Dense regions like Western Europe and East Asia receive finer cells, enabling more precise predictions where data supports it, while maintaining global coverage through coarser cells in sparse regions.
+Finally, our adaptive geocell generation approach effectively allocates prediction granularity according to data density. By applying per-country clustering, dense regions like Western Europe and East Asia receive finer cells that enable more precise predictions where data supports it, while maintaining global coverage through coarser cells in sparse regions. This data-driven partitioning proves more effective than uniform tessellation for geographically imbalanced datasets.
 
-Several limitations warrant mention. First, our dataset of 43,000 images, while diverse, may not capture the full variety of global street view imagery. Second, the concept vocabulary was derived from the training data and may miss important geographic indicators present in other regions. Third, while cross-attention provides spatial interpretability, the concept embeddings themselves remain high-dimensional vectors that require further analysis to fully interpret.
+Several limitations warrant mention. Our dataset of 43,000 images, while diverse, may not capture the full variety of global street view imagery. Additionally, the concept vocabulary derived from training data may miss important geographic indicators present in other regions. While cross-attention provides spatial interpretability, the concept embeddings themselves remain high-dimensional vectors that require further analysis to fully interpret.
 
 %-------------------------------------------------------------------------------
 %	CONCLUSION
