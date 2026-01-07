@@ -1,0 +1,58 @@
+#!/bin/bash
+#SBATCH --partition=gpu_h100
+#SBATCH --gpus=1
+#SBATCH --job-name=cgeo
+#SBATCH --output=/scratch-shared/pnair/Project_AI/jobs/outputs/train_concept_aware_precompute.log
+#SBATCH --time=24:00:00  
+#SBATCH --cpus-per-task=9
+#SBATCH --mem=64G
+## SBATCH --mail-type=END
+## SBATCH --mail-user=pradyut.nair@student.uva.nl
+
+# Activate environment
+module load 2025
+module load Anaconda3/2025.06-1
+cd /scratch-shared/pnair/Project_AI/
+module load CUDA/12.8.0
+
+source activate streetview_pnair
+export PYTHONNOUSERSITE=1
+export PYTHONPATH=/scratch-shared/pnair/Project_AI:$PYTHONPATH
+
+# ===== Stage-specific epoch counts =====
+STAGE0_EPOCHS=0   # Domain adaptation 
+STAGE1_EPOCHS=100   # Concept learning (increased from 20 to 30)
+STAGE2_EPOCHS=50   # Geolocation learning
+
+# Run Training with Three-Stage Concept-Aware Pipeline
+python scripts/training/train_concept_aware_ckpt_resume.py \
+    --encoder_model "geolocal/StreetCLIP" \
+    --batch_size 512 \
+    --stage0_epochs ${STAGE0_EPOCHS} \
+    --stage0_lr 1e-5 \
+    --stage0_weight_decay 0.01 \
+    --unfreeze_layers 2 \
+    --stage1_epochs ${STAGE1_EPOCHS} \
+    --stage1_lr 3e-4 \
+    --stage1_weight_decay 0.01 \
+    --stage2_epochs ${STAGE2_EPOCHS} \
+    --stage2_lr 1e-4 \
+    --stage2_weight_decay 0.01 \
+    --temperature 0.07 \
+    --lambda_concept_gps 1.0 \
+    --lambda_concept 3.0 \
+    --lambda_cell 1.0 \
+    --lambda_offset 1.0 \
+    --lambda_country 0.5 \
+    --label_smoothing 0.1 \
+    --early_stopping_patience 7 \
+    --save_interval 1 \
+    --min_samples_per_cell 20 \
+    --gradient_accumulation_steps 2 \
+    --use_wandb \
+    --use_amp \
+    --use_class_weights \
+    --coordinate_loss_type "haversine" \
+    --csv_path "/scratch-shared/pnair/Project_AI/data/dataset-43k-updated.csv" \
+    --precompute_embeddings \
+    --resume_from_checkpoint "/scratch-shared/pnair/Project_AI/results/concept-aware-3-stage/streetclip/global/haversine/2025-12-04_20-07-33/checkpoints/best_model_stage0.pt" 

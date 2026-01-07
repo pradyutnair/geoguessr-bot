@@ -1,8 +1,0 @@
--rw-rw-r-- 1 pradyutnair pradyutnair  64K Dec 30 14:31 /tmp/dl_test.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair 293K Dec 30 14:30 /tmp/geo_pano.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair 8.4M Dec 30 14:37 /tmp/streetview_search_test.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair 2.1M Dec 30 14:28 /tmp/streetview_test.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair 2.1M Dec 30 14:32 /tmp/sv.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair  33K Dec 30 12:40 /tmp/test_panorama.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair 8.7K Dec 30 12:41 /tmp/test_updated_downloader.jpg
--rw-rw-r-- 1 pradyutnair pradyutnair  48K Dec 30 14:31 /tmp/tile_test.jpg

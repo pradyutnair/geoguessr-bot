@@ -1,2 +1,0 @@
-round,predicted_lat,predicted_lng,true_lat,true_lng,distance_km,score,damage,timestamp,game_url
-1,44.72970962524414,4.3483734130859375,5.35532283782959,100.31185150146484,10057.266156319576,6,-3384,2025-12-30T19:37:17.883935,https://www.geoguessr.com/duels/45d110e1-cb07-4e7a-a338-ce1a24c65cbb

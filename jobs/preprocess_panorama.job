@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --partition=gpu_mig
+#SBATCH --gpus=1
+#SBATCH --job-name=preprocess_pano
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=9
+#SBATCH --time=06:00:00
+#SBATCH --mem=32GB
+#SBATCH --output=jobs/outputs/preprocess_pano.log
+
+module purge
+module load 2025
+module load Anaconda3/2025.06-1
+
+cd /scratch-shared/pnair/Project_AI/
+source activate streetview_pnair
+export PYTHONNOUSERSITE=1
+
+python scripts/data_processing/preprocess_panorama.py --panorama-folder /scratch-shared/pnair/Project_AI/data/6906237dc7731161a37282b2/panorama
+
+

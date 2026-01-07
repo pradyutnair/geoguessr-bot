@@ -1,0 +1,102 @@
+#!/bin/bash
+#SBATCH --partition=gpu_h100
+#SBATCH --gpus=1
+#SBATCH --job-name=s1
+#SBATCH --output=/scratch-shared/pnair/Project_AI/jobs/outputs/stage1/train_stage1_prototype_pe.log
+#SBATCH --time=14:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+
+# Activate environment
+module load 2025
+module load Anaconda3/2025.06-1
+cd /scratch-shared/pnair/Project_AI/
+module load CUDA/12.8.0
+
+source activate streetview_pnair
+export PYTHONNOUSERSITE=1
+export PYTHONPATH=/scratch-shared/pnair/Project_AI:$PYTHONPATH
+export PATH="$CONDA_PREFIX/bin:$PATH"
+
+# ===== Stage 1 Configuration =====
+STAGE1_EPOCHS=25
+BATCH_SIZE=256    # Larger batch size possible with precomputed embeddings
+LR=3e-4
+
+# Loss weights
+LAMBDA_META=1.0
+LAMBDA_PARENT=0.5
+LAMBDA_CONTRASTIVE=0.5
+LAMBDA_REG=0.001
+LAMBDA_SEMANTIC=0.15  # Semantic consistency loss
+
+# Hierarchical loss weights
+LAMBDA_CONSISTENCY=0.3
+LAMBDA_PARENT_CONTRASTIVE=0.2
+LAMBDA_INTRA_PARENT=0.01
+
+# Focal loss
+FOCAL_GAMMA=2.0
+LABEL_SMOOTHING=0.2  # Increased for regularization
+
+# Temperature annealing
+INIT_LOGIT_SCALE_LOW=4.0
+INIT_LOGIT_SCALE_HIGH=14.0
+
+DATA_ROOT=/scratch-shared/pnair/Project_AI/data
+STAGE0_CKPT_FILE="/scratch-shared/pnair/Project_AI/jobs/outputs/stage0_ckpt_path.txt"
+if [ -f "${STAGE0_CKPT_FILE}" ]; then
+  STAGE0_CKPT="$(cat "${STAGE0_CKPT_FILE}")"
+else
+  STAGE0_CKPT="/scratch-shared/pnair/Project_AI/results/stage0-prototype/geolocal_StreetCLIP/REPLACE_WITH_LATEST/checkpoints/best_model_stage0.pt"
+fi
+EMBEDDING_CACHE_DIR="/scratch-shared/pnair/Project_AI/data/precomputed_embeddings"
+
+TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+OUTPUT_DIR="/scratch-shared/pnair/Project_AI/results/stage1-prototype/geolocal_StreetCLIP/${TIMESTAMP}"
+
+# Run Stage 1 Training with Precomputed Embeddings + Transformer Bottleneck
+python scripts/training/train_stage1_prototype.py \
+    --csv_path "/scratch-shared/pnair/Project_AI/data/dataset-43k-mapped.csv" \
+    --encoder_model "geolocal/StreetCLIP" \
+    --resume_from_checkpoint ${STAGE0_CKPT} \
+    --output_dir "${OUTPUT_DIR}" \
+    --stage1_epochs ${STAGE1_EPOCHS} \
+    --batch_size ${BATCH_SIZE} \
+    --lr ${LR} \
+    --weight_decay 0.05 \
+    --lambda_meta ${LAMBDA_META} \
+    --lambda_parent ${LAMBDA_PARENT} \
+    --lambda_contrastive ${LAMBDA_CONTRASTIVE} \
+    --lambda_reg ${LAMBDA_REG} \
+    --lambda_consistency ${LAMBDA_CONSISTENCY} \
+    --lambda_parent_contrastive ${LAMBDA_PARENT_CONTRASTIVE} \
+    --lambda_intra_parent ${LAMBDA_INTRA_PARENT} \
+    --lambda_semantic ${LAMBDA_SEMANTIC} \
+    --use_parent_guided_meta \
+    --parent_guide_temperature 2.0 \
+    --consistency_temperature 1.0 \
+    --use_temp_annealing \
+    --init_logit_scale_low ${INIT_LOGIT_SCALE_LOW} \
+    --init_logit_scale_high ${INIT_LOGIT_SCALE_HIGH} \
+    --focal_gamma ${FOCAL_GAMMA} \
+    --label_smoothing ${LABEL_SMOOTHING} \
+    --temperature 0.07 \
+    --learnable_prototypes \
+    --prototype_residual_scale 0.01 \
+    --gradient_accumulation_steps 2 \
+    --early_stopping_patience 15 \
+    --save_interval 5 \
+    --viz_interval 1 \
+    --use_amp \
+    --use_class_weights \
+    --use_wandb \
+    --data_root ${DATA_ROOT} \
+    --precompute_embeddings \
+    --use_embedding_cache
+
+STAGE1_CKPT="${OUTPUT_DIR}/checkpoints/best_model_stage1.pt"
+echo "${STAGE1_CKPT}" > /scratch-shared/pnair/Project_AI/jobs/outputs/stage1_ckpt_path.txt
+echo "Wrote Stage 1 checkpoint path: ${STAGE1_CKPT}"
+
+

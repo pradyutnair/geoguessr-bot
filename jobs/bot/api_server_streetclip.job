@@ -1,0 +1,31 @@
+#!/bin/bash
+#SBATCH --partition=gpu_h100
+#SBATCH --gpus=1
+#SBATCH --job-name=gc-api
+#SBATCH --output=/scratch-shared/pnair/Project_AI/jobs/outputs/bot/api_server_streetclip.log
+#SBATCH --time=2:00:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
+
+# Activate environment
+module load 2025
+module load Anaconda3/2025.06-1
+cd /scratch-shared/pnair/Project_AI/
+module load CUDA/12.8.0
+
+source activate streetview_pnair
+export PYTHONNOUSERSITE=1
+export PYTHONPATH=/scratch-shared/pnair/Project_AI:$PYTHONPATH
+export PATH="$CONDA_PREFIX/bin:$PATH"
+
+# Install flask-cors if not available
+pip install flask-cors
+
+# Run vanilla HuggingFace StreetCLIP API server on port 5002
+python bot/api_server.py \
+    --default-streetclip \
+    --host 0.0.0.0 \
+    --port 5002 \
+    --device cuda:0 \
+    --grid-step 5.0
+
