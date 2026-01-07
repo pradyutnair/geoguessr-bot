@@ -249,6 +249,7 @@ We evaluate our approach on both in-distribution test data and an out-of-distrib
 
 For concept classification (Stage 1), we report top-1 and top-5 accuracy for both child and parent concepts. For geolocation (Stage 2), we report median and mean haversine distance error in kilometers, geocell classification accuracy, and threshold accuracies at standard geographic scales:
 \begin{itemize}
+    \setlength{\itemsep}{0pt}
     \item \textbf{Street}: within 1 km
     \item \textbf{City}: within 25 km
     \item \textbf{Region}: within 200 km
@@ -265,11 +266,11 @@ Table~\ref{tab:stage1} presents concept classification results on the held-out t
 \toprule
 \textbf{Variant} & \textbf{Child (Top-1)} & \textbf{Parent (Top-1)} & \textbf{Child (Top-5)} & \textbf{Parent (Top-5)} \\
 \midrule
-Vanilla & 0.455 & 0.386 & 0.681 & 0.713 \\
-Finetuned & \textbf{0.461} & \textbf{0.480} & \textbf{0.716} & \textbf{0.725} \\
+Vanilla & 45.5\% & 38.6\% & 68.1\% & 71.3\% \\
+Finetuned & \textbf{46.1\%} & \textbf{48.0\%} & \textbf{71.6\%} & \textbf{72.5\%} \\
 \bottomrule
 \end{tabularx}
-\caption{Stage 1 concept classification accuracy on the test split. The finetuned variant with Stage 0 pretraining shows improved parent concept accuracy, indicating better hierarchical structure learning.}
+\caption{Stage 1 concept classification accuracy (\%) on the test split. The finetuned variant with Stage 0 pretraining shows improved parent concept accuracy, indicating better hierarchical structure learning.}
 \label{tab:stage1}
 \end{table}
 
@@ -289,12 +290,12 @@ Table~\ref{tab:stage2_test} presents geolocation results on the test split, comp
 \textbf{Variant} & \textbf{Mode} & \textbf{Median (km)} & \textbf{Mean (km)} & \textbf{Cell Acc} & \textbf{City} & \textbf{Region} & \textbf{Country} \\
 \midrule
 \multirow{3}{*}{Vanilla} 
-& Both & 133.2 & 713.8 & 0.454 & 0.215 & 0.574 & 0.830 \\
+& Both & 133.2 & 713.8 & 0.454 & 0.215 & 0.574 & \textbf{0.830} \\
 & Concept & 139.0 & 745.9 & 0.451 & 0.195 & 0.566 & 0.824 \\
 & Image & 222.0 & 1070.5 & 0.374 & 0.175 & 0.482 & 0.753 \\
 \midrule
 \multirow{3}{*}{Finetuned} 
-& Both & \textbf{126.0} & \textbf{684.6} & \textbf{0.449} & \textbf{0.232} & \textbf{0.578} & \textbf{0.829} \\
+& Both & \textbf{126.0} & \textbf{684.6} & \textbf{0.449} & \textbf{0.232} & \textbf{0.578} & 0.829 \\
 & Concept & 137.0 & 688.6 & 0.443 & 0.227 & 0.564 & 0.822 \\
 & Image & 154.0 & 790.5 & 0.430 & 0.202 & 0.546 & 0.806 \\
 \bottomrule
