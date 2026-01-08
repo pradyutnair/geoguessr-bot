@@ -78,43 +78,6 @@
       \field{title}{OmniLoc: Towards Leveraging Multiple Perspectives for Image Geolocalization}
       \field{year}{2024}
     \endentry
-    \entry{ba2016layer}{article}{}
-      \name{author}{3}{}{%
-        {{un=0,uniquepart=base,hash=750bb29ebaf655e36626e464041edb6d}{%
-           family={Ba},
-           familyi={B\bibinitperiod},
-           given={Jimmy\bibnamedelima Lei},
-           giveni={J\bibinitperiod\bibinitdelim L\bibinitperiod},
-           givenun=0}}%
-        {{un=0,uniquepart=base,hash=9ce51427604561924b91aa544c9c1b2a}{%
-           family={Kiros},
-           familyi={K\bibinitperiod},
-           given={Jamie\bibnamedelima Ryan},
-           giveni={J\bibinitperiod\bibinitdelim R\bibinitperiod},
-           givenun=0}}%
-        {{un=0,uniquepart=base,hash=813bd95fe553e6079cd53a567b238287}{%
-           family={Hinton},
-           familyi={H\bibinitperiod},
-           given={Geoffrey\bibnamedelima E},
-           giveni={G\bibinitperiod\bibinitdelim E\bibinitperiod},
-           givenun=0}}%
-      }
-      \strng{namehash}{059348b2d0b3fe9a67209502c14057d1}
-      \strng{fullhash}{059348b2d0b3fe9a67209502c14057d1}
-      \strng{bibnamehash}{059348b2d0b3fe9a67209502c14057d1}
-      \strng{authorbibnamehash}{059348b2d0b3fe9a67209502c14057d1}
-      \strng{authornamehash}{059348b2d0b3fe9a67209502c14057d1}
-      \strng{authorfullhash}{059348b2d0b3fe9a67209502c14057d1}
-      \field{sortinit}{B}
-      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
-      \field{extradatescope}{labelyear}
-      \field{labeldatesource}{year}
-      \field{labelnamesource}{author}
-      \field{labeltitlesource}{title}
-      \field{journaltitle}{arXiv preprint arXiv:1607.06450}
-      \field{title}{Layer Normalization}
-      \field{year}{2016}
-    \endentry
     \entry{bengio2009curriculum}{inproceedings}{}
       \name{author}{4}{}{%
         {{un=0,uniquepart=base,hash=40a8e4774982146adc2688546f54efb2}{%
