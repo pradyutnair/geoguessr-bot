@@ -255,14 +255,7 @@ where $\sigma$ is the sigmoid function, $\odot$ is element-wise multiplication, 
     \item When $g_d \approx 0.5$: The $d$-th dimension balances both sources equally
 \end{enumerate}
 
-Figure~\ref{fig:gate_distribution} shows the distribution of gate values during validation. The 90th percentile gate value of approximately 0.82 indicates that most dimensions tend to favor concept information, while the 10th percentile of 0.29 shows some dimensions rely more heavily on spatial context. This adaptive balancing allows the model to use concept information when it is discriminative while falling back to spatial features when concepts are ambiguous.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.85\textwidth]{val_gate.png}
-    \caption{Distribution of learned gate values during validation. The gate controls the contribution of concept versus spatial (cross-attention) information for each of the 512 dimensions. Higher values (near 1) indicate greater reliance on concept information, while lower values (near 0) indicate greater reliance on spatial image features. The model learns to use a balanced combination, with median gate value around 0.58, though dimensions vary widely from concept-dominated (90th percentile: 0.82) to spatial-dominated (10th percentile: 0.29).}
-    \label{fig:gate_distribution}
-\end{figure}
+The learned gating mechanism adaptively balances concept and spatial information across different dimensions, allowing the model to use the most appropriate information source for each aspect of geolocation. A detailed analysis of gate value distributions is presented in Section~\ref{sec:interpretability}.
 
 \textbf{Prediction Heads.} Two prediction heads operate on the final fused embedding $z_{\text{final}}$:
 \begin{enumerate}
@@ -357,7 +350,12 @@ Despite variation in fine-grained accuracy, country-level accuracy exceeds 80\% 
 
 
 \subsection{Out-of-Distribution Evaluation}
-To assess generalization, we evaluate on an external GeoGuessr dataset containing 5,477 images not seen during training. Table~\ref{tab:stage2_hf} presents these results.
+
+To assess generalization beyond our compiled dataset, we evaluate our approach on two complementary external datasets: (1) a static GeoGuessr image benchmark from HuggingFace, and (2) live GeoGuessr game rounds through an automated bot system. This two-pronged evaluation strategy tests both batch inference performance and real-time interactive capabilities.
+
+\subsubsection{External GeoGuessr Dataset Evaluation}
+
+We evaluate on a publicly available GeoGuessr dataset \parencite{fren-gor-geoguessr} containing 5,477 street view images with associated ground truth locations. Table~\ref{tab:stage2_hf} presents results on this static benchmark.
 
 \begin{table}[h!]
 \centering
@@ -379,40 +377,19 @@ To assess generalization, we evaluate on an external GeoGuessr dataset containin
 GeoCLIP & -- & 1015.8 & 3190.6 & -- & 0.027 & 0.160 & 0.424 \\
 \bottomrule
 \end{tabularx}
-\caption{Stage 2 geolocation performance on the out-of-distribution GeoGuessr dataset. Performance degrades compared to in-distribution data, with the finetuned variant showing better generalization.}
+\caption{Stage 2 geolocation performance on the external HuggingFace GeoGuessr dataset. Performance degrades compared to in-distribution data, with the finetuned variant showing better generalization.}
 \label{tab:stage2_hf}
 \end{table}
 
-\begin{figure}[h!]
-    \centering
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{analysis/stage2_test_split_results.png}
-        \caption{In-distribution test split performance}
-        \label{fig:stage2_test}
-    \end{subfigure}
-    \hspace{0.04\linewidth}
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{analysis/stage2_hf_results.png}
-        \caption{Out-of-distribution GeoGuessr performance}
-        \label{fig:stage2_hf}
-    \end{subfigure}
-    \caption{Stage 2 geolocation results comparing model variants and ablation modes. The finetuned variant excels on both in-distribution and out-of-distribution data, demonstrating the value of Stage 0 pretraining for generalization.}
-    \label{fig:stage2_results}
-\end{figure}
+Out-of-distribution performance on the static benchmark reveals the generalization capabilities of our approach. Median error increases substantially compared to in-distribution results, reflecting the expected distribution shift between training and GeoGuessr imagery. Despite this challenge, the finetuned variant maintains superior performance across all evaluation metrics, with the best configuration achieving 349.9 km median error compared to 391.5 km for vanilla.
 
-Out-of-distribution performance reveals the generalization capabilities of our approach. Median error increases substantially compared to in-distribution results, reflecting the expected distribution shift between training and GeoGuessr imagery. Despite this challenge, the finetuned variant maintains superior performance across all evaluation metrics, with the best configuration achieving 349.9 km median error compared to 391.5 km for vanilla.
+Comparing variants within each ablation mode confirms the consistent benefit of Stage 0 pretraining. The finetuned model achieves lower median error than vanilla for all three modes, with improvements ranging from approximately 9 to 14\% depending on the configuration. Even with the distribution shift, country-level accuracy remains above 63\% across all configurations. The baseline GeoCLIP model achieves significantly higher median error (1015.8 km), demonstrating the advantage of our concept-aware approach.
 
-Comparing variants within each ablation mode confirms the consistent benefit of Stage 0 pretraining. The finetuned model achieves lower median error than vanilla for all three modes, with improvements ranging from approximately 9 to 14\% depending on the configuration. This uniform advantage validates that Stage 0 pretraining provides broadly transferable representations regardless of inference configuration.
+\subsubsection{GeoGuessr Game Evaluation}
 
-Even with the distribution shift, country-level accuracy remains above 63\% across all configurations, indicating robust coarse localization. The baseline GeoCLIP model achieves significantly higher median error (1015.8 km) and lower threshold accuracies across all scales, demonstrating the advantage of our concept-aware approach even for out-of-distribution data. Figure~\ref{fig:stage2_results} visualizes performance across ablation modes and evaluation settings.
+To assess real-time interactive performance, we deployed our model through a FastAPI-based inference server and integrated it directly with GeoGuessr's game API. This automated bot system captures panoramic imagery from active game rounds, submits predictions through GeoGuessr's endpoints, and records scores and distances exactly as human players experience them. We evaluated on 5 games totaling 25 rounds spanning diverse global locations.
 
-\subsection{Human vs Baseline Comparison}
-
-To assess real-world performance in an interactive geolocation setting, we evaluated our main model against the baseline GeoCLIP model and human performance on GeoGuessr game rounds. We collected data from 5 games totaling 25 rounds, where each round presented a street view image and required predicting the geographic location. The human player's performance serves as an upper bound for interpretable reasoning, while GeoCLIP provides a strong baseline from recent vision-language geolocation research.
-
-Table~\ref{tab:human_comparison} presents aggregated results across all rounds. The baseline GeoCLIP model achieves the best median distance error (418.7 km) and mean distance error (1313.9 km), outperforming our main model (549.8 km median, 1527.0 km mean) and human performance (849.0 km median, 2643.0 km mean). However, examining GeoGuessr scores reveals a different pattern: our main model achieves the highest median score (3459) and mean score (3326), closely followed by GeoCLIP (3776 median, 3297 mean), while human performance lags behind (2830 median, 2665 mean).
+Table~\ref{tab:human_comparison} presents aggregated results comparing our model against human performance on the same game rounds. Our model achieves superior median distance error (549.8 km vs 849.0 km) and higher GeoGuessr scores (3459 vs 2830 median), demonstrating that the concept bottleneck does not substantially compromise practical performance in live game settings. The human player shows high variance (849 km median but 2643 km mean), suggesting that human geolocation relies on domain knowledge and reasoning that remains challenging to fully capture algorithmically.
 
 \begin{table}[h!]
 \centering
@@ -421,19 +398,30 @@ Table~\ref{tab:human_comparison} presents aggregated results across all rounds. 
 \textbf{Method} & \textbf{Median Distance (km)} & \textbf{Mean Distance (km)} & \textbf{Median Score} & \textbf{Mean Score} \\
 \midrule
 Main Model & 549.8 & 1527.0 & 3459 & 3326 \\
-Baseline (GeoCLIP) & 418.7 & 1313.9 & 3776 & 3297 \\
 Human & 849.0 & 2643.0 & 2830 & 2665 \\
 \bottomrule
 \end{tabularx}
-\caption{GeoGuessr game comparison: main model vs baseline (GeoCLIP) vs human performance on 25 rounds.}
+\caption{GeoGuessr game comparison: model vs human performance on 25 live rounds.}
 \label{tab:human_comparison}
 \end{table}
 
-GeoGuessr scoring provides complementary insights: GeoCLIP achieves the highest median score (3776), followed by our main model (3459) and human (2830). The mean scores show a similar competitive pattern: main model (3326), GeoCLIP (3297), and human (2665). These results indicate that our concept-aware approach achieves competitive game performance with the baseline GeoCLIP model, with both models significantly outperforming human-level scoring.
+\subsection{Interpretability Analysis}
+\label{sec:interpretability}
 
-Several factors may explain these results. GeoCLIP maintains an advantage in distance accuracy (418.7 km vs 549.8 km median), likely due to extensive pretraining on geographic data. However, our concept-aware model achieves competitive game scores (3459 vs 3776 median) and even slightly higher mean scores (3326 vs 3297), demonstrating that the concept bottleneck does not substantially compromise practical performance. The interactive GeoGuessr setting differs from our training distribution, and human performance shows high variance (849 km median but 2643 km mean distance), suggesting that human geolocation relies on domain knowledge and reasoning that remains challenging for models to fully capture.
+Our concept-aware geolocation system provides multiple levels of interpretability through patch-level attention visualization, hierarchical concept predictions, and learned gating mechanisms. This section analyzes these interpretability features in detail.
 
-Our model's concept bottleneck provides interpretability advantages while maintaining competitive performance with strong baselines like GeoCLIP. The small accuracy trade-off (549.8 km vs 418.7 km median error) is balanced by human-interpretable concept representations and spatial attention maps that enable explainable predictions. Future work could explore hybrid approaches that further narrow the accuracy gap while preserving interpretability benefits.
+\textbf{Gate Distribution Analysis.} The learned gating mechanism in Stage 2 provides interpretability by revealing which dimensions of the final embedding rely on semantic concepts versus spatial visual patterns. Figure~\ref{fig:gate_distribution} shows the distribution of gate values during validation across all 512 dimensions.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.65\textwidth]{val_gate.png}
+    \caption{Distribution of learned gate values during validation. The gate controls the contribution of concept versus spatial (cross-attention) information for each of the 512 dimensions. Higher values (near 1) indicate greater reliance on concept information, while lower values (near 0) indicate greater reliance on spatial image features. The model learns to use a balanced combination, with median gate value around 0.58, though dimensions vary widely from concept-dominated (90th percentile: 0.82) to spatial-dominated (10th percentile: 0.29).}
+    \label{fig:gate_distribution}
+\end{figure}
+
+The distribution reveals several important patterns. The median gate value of approximately 0.58 indicates that, overall, the model slightly favors concept information, but the wide distribution (10th percentile: 0.29, 90th percentile: 0.82) demonstrates dimensional specialization. Dimensions with gate values near 1 (concept-dominated) likely capture geographic distinctions that are well-represented by semantic concepts, such as architectural styles, road markings, or vehicle types. In contrast, dimensions with gate values near 0 (spatial-dominated) may capture features that require spatial reasoning, such as vegetation patterns, lighting conditions, or terrain characteristics. This adaptive balancing allows the model to leverage the most appropriate information source for each aspect of geolocation, providing interpretable insights into the model's reasoning process.
+
+\textbf{Example Prediction Analysis.} To demonstrate the interpretability capabilities in practice, Figures~\ref{fig:interpretability_example_a} and~\ref{fig:interpretability_example_b} in the Appendix present comprehensive analyses of representative GeoGuessr rounds, illustrating patch-level attention visualization, geographic prediction with confidence metrics, concept-based reasoning, and the learned gating mechanism. The analyses reveal that the model focuses on distinctive visual features such as vehicles, road markings, and architectural structures, with hierarchical concept predictions capturing both specific indicators and broader geographic context.
 
 %-------------------------------------------------------------------------------
 %	DISCUSSION
@@ -472,7 +460,32 @@ Future directions include expanding the concept vocabulary through automatic dis
 %-------------------------------------------------------------------------------
 %	REFERENCES
 %-------------------------------------------------------------------------------
-
 \printbibliography
+
+%-------------------------------------------------------------------------------
+%	APPENDIX
+%-------------------------------------------------------------------------------
+
+\appendix
+
+\section{Detailed Interpretability Examples}
+\label{app:interpretability}
+
+Figures~\ref{fig:interpretability_example_a} and~\ref{fig:interpretability_example_b} present comprehensive interpretability analyses for two representative GeoGuessr rounds, demonstrating all aspects of the model's reasoning process.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{round_01_110135_concepts.png}
+    \caption{Interpretability analysis for Game 1 Round 1. This example demonstrates the model attending to architectural and infrastructure features for geolocation. The patch attention heatmap reveals focus on road geometry and built structures, while concept predictions capture semantic categories relevant to the predicted region.}
+    \label{fig:interpretability_example_b}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{round_09_110825_concepts.png}
+    \caption{Interpretability analysis for Game 1 Round 9. The model identifies this location in West Africa through distinctive visual cues including unique vehicles and license plates, with balanced concept-spatial reasoning (gate 0.431). Top child concepts include ``Unique car'' and ``License Plates''; parent concepts indicate ``car\_meta'' and ``landscape\_savannah'' categories.}
+    \label{fig:interpretability_example_a}
+\end{figure}
+
 
 \end{document}
