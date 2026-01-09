@@ -6,8 +6,8 @@
 \contentsline {subsection}{\numberline {3.2}Geocell Generation}{4}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}Stage 0: Domain Contrastive Pretraining}{4}{subsection.3.3}%
 \contentsline {subsection}{\numberline {3.4}Stage 1: Text-Prototype Concept Learning}{6}{subsection.3.4}%
-\contentsline {subsection}{\numberline {3.5}Stage 2: Gated Fusion Geolocation}{6}{subsection.3.5}%
-\contentsline {section}{\numberline {4}Experiments}{7}{section.4}%
+\contentsline {subsection}{\numberline {3.5}Stage 2: Gated Fusion Geolocation}{7}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Experiments}{8}{section.4}%
 \contentsline {subsection}{\numberline {4.1}Evaluation Metrics}{8}{subsection.4.1}%
 \contentsline {subsection}{\numberline {4.2}Stage 1: Concept Classification Results}{8}{subsection.4.2}%
 \contentsline {subsection}{\numberline {4.3}Stage 2: Geolocation Results}{8}{subsection.4.3}%

@@ -173,7 +173,9 @@ Concept alignment losses similarly encourage concept embeddings to cluster accor
 \end{align}
 where $z$ is the L2-normalized concept embedding, $T_{\text{child}}$ and $T_{\text{parent}}$ are text-encoded prototype matrices projected to 512 dimensions, and $c_{\text{child}}$, $c_{\text{parent}}$ are the ground truth concept indices.
 
-A hierarchy consistency loss encourages embeddings from the same parent category to cluster together in the concept space, enforcing the semantic relationship between child and parent concepts. An optional anchor loss prevents catastrophic forgetting by penalizing large deviations from the original StreetCLIP representations. Additionally, a patch-level GPS alignment loss encourages patch tokens to align with GPS embeddings, providing spatial regularization.
+An optional hierarchy consistency loss encourages embeddings from the same parent category to cluster together in the concept space, enforcing the semantic relationship between child and parent concepts. An optional anchor loss prevents catastrophic forgetting by penalizing large deviations from the original StreetCLIP representations. Additionally, an optional patch-level GPS alignment loss encourages patch tokens to align with GPS embeddings, providing spatial regularization.
+
+In practice, we find that the core GPS, child concept, and parent concept alignment objectives are sufficient for effective domain adaptation. The hierarchy consistency and patch-GPS losses are optional and were not used in training the final model reported in our experiments ($\lambda_{\text{hierarchy}} = 0$, $\lambda_{\text{patch}} = 0$).
 
 The total Stage 0 loss combines these objectives with learned weights:
 \begin{equation}

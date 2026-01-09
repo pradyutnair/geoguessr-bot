@@ -144,21 +144,21 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Stage 1: Text-Prototype Concept Learning}{6}{subsection.3.4}\protected@file@percent }
 \abx@aux@page{34}{6}
 \abx@aux@page{35}{6}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Stage 2: Gated Fusion Geolocation}{6}{subsection.3.5}\protected@file@percent }
 \abx@aux@cite{0}{vaswani2017attention}
 \abx@aux@segm{0}{0}{vaswani2017attention}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Stage 2: Gated Fusion Geolocation}{7}{subsection.3.5}\protected@file@percent }
 \abx@aux@page{36}{7}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{7}{section.4}\protected@file@percent }
-\newlabel{sec:experiments}{{4}{7}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{8}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{8}{Experiments}{section.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Evaluation Metrics}{8}{subsection.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Stage 1: Concept Classification Results}{8}{subsection.4.2}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Stage 1 concept classification accuracy (\%) on the test split. The finetuned variant with Stage 0 pretraining shows improved parent concept accuracy, indicating better hierarchical structure learning.\relax }}{8}{table.caption.4}\protected@file@percent }
 \newlabel{tab:stage1}{{1}{8}{Stage 1 concept classification accuracy (\%) on the test split. The finetuned variant with Stage 0 pretraining shows improved parent concept accuracy, indicating better hierarchical structure learning.\relax }{table.caption.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Stage 2: Geolocation Results}{8}{subsection.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Stage 2 geolocation performance on the in-distribution test split. The finetuned variant with gated fusion (``both'') achieves the best median error of 126 km by adaptively combining concept and spatial information.\relax }}{8}{table.caption.5}\protected@file@percent }
-\newlabel{tab:stage2_test}{{2}{8}{Stage 2 geolocation performance on the in-distribution test split. The finetuned variant with gated fusion (``both'') achieves the best median error of 126 km by adaptively combining concept and spatial information.\relax }{table.caption.5}{}}
 \abx@aux@cite{0}{fren-gor-geoguessr}
 \abx@aux@segm{0}{0}{fren-gor-geoguessr}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Stage 2 geolocation performance on the in-distribution test split. The finetuned variant with gated fusion (``both'') achieves the best median error of 126 km by adaptively combining concept and spatial information.\relax }}{9}{table.caption.5}\protected@file@percent }
+\newlabel{tab:stage2_test}{{2}{9}{Stage 2 geolocation performance on the in-distribution test split. The finetuned variant with gated fusion (``both'') achieves the best median error of 126 km by adaptively combining concept and spatial information.\relax }{table.caption.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Out-of-Distribution Evaluation}{9}{subsection.4.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}External GeoGuessr Dataset Evaluation}{9}{subsubsection.4.4.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Stage 2 geolocation performance on the external HuggingFace GeoGuessr dataset. Performance degrades compared to in-distribution data, with the finetuned variant showing better generalization.\relax }}{9}{table.caption.6}\protected@file@percent }
@@ -168,8 +168,8 @@
 \newlabel{tab:human_comparison}{{4}{10}{GeoGuessr game comparison: model vs human performance on 25 live rounds.\relax }{table.caption.7}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Interpretability Analysis}{10}{subsection.4.5}\protected@file@percent }
 \newlabel{sec:interpretability}{{4.5}{10}{Interpretability Analysis}{subsection.4.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Distribution of learned gate values during validation. The gate controls the contribution of concept versus spatial (cross-attention) information for each of the 512 dimensions. Higher values (near 1) indicate greater reliance on concept information, while lower values (near 0) indicate greater reliance on spatial image features. The model learns to use a balanced combination, with median gate value around 0.58, though dimensions vary widely from concept-dominated (90th percentile: 0.82) to spatial-dominated (10th percentile: 0.29).\relax }}{10}{figure.caption.8}\protected@file@percent }
-\newlabel{fig:gate_distribution}{{3}{10}{Distribution of learned gate values during validation. The gate controls the contribution of concept versus spatial (cross-attention) information for each of the 512 dimensions. Higher values (near 1) indicate greater reliance on concept information, while lower values (near 0) indicate greater reliance on spatial image features. The model learns to use a balanced combination, with median gate value around 0.58, though dimensions vary widely from concept-dominated (90th percentile: 0.82) to spatial-dominated (10th percentile: 0.29).\relax }{figure.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Distribution of learned gate values during validation. The gate controls the contribution of concept versus spatial (cross-attention) information for each of the 512 dimensions. Higher values (near 1) indicate greater reliance on concept information, while lower values (near 0) indicate greater reliance on spatial image features. The model learns to use a balanced combination, with median gate value around 0.58, though dimensions vary widely from concept-dominated (90th percentile: 0.82) to spatial-dominated (10th percentile: 0.29).\relax }}{11}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:gate_distribution}{{3}{11}{Distribution of learned gate values during validation. The gate controls the contribution of concept versus spatial (cross-attention) information for each of the 512 dimensions. Higher values (near 1) indicate greater reliance on concept information, while lower values (near 0) indicate greater reliance on spatial image features. The model learns to use a balanced combination, with median gate value around 0.58, though dimensions vary widely from concept-dominated (90th percentile: 0.82) to spatial-dominated (10th percentile: 0.29).\relax }{figure.caption.8}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{11}{section.5}\protected@file@percent }
 \newlabel{sec:discussion}{{5}{11}{Discussion}{section.5}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{12}{section.6}\protected@file@percent }
@@ -186,8 +186,8 @@
 \abx@aux@page{46}{12}
 \abx@aux@page{47}{12}
 \abx@aux@page{48}{12}
-\abx@aux@page{49}{12}
-\abx@aux@page{50}{12}
+\abx@aux@page{49}{13}
+\abx@aux@page{50}{13}
 \abx@aux@page{51}{13}
 \abx@aux@page{52}{13}
 \abx@aux@page{53}{13}
